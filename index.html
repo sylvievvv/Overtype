@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Overtyp turns contact details from PDFs, scans, Word files, spreadsheets and emails into a clean, checked Excel list.">
+<title>Overtyp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Sans:wght@600;700&display=swap">
+<style>
+/* Layout: business app — top bar, left menu, compact upload card, results overview + calm table, side panel to review one contact */
+:root{
+  --bg:#F5F7F6; --surface:#FFFFFF; --sunk:#F0F3F2; --ink:#17201C; --muted:#5E6B66; --faint:#8A9590; --line:#E1E6E3; --line-strong:#CBD3CF;
+  --accent:#1D6A4C; --accent-ink:#FFFFFF; --accent-weak:#EAF3EE;
+  --warn:#94600F; --warn-weak:#FBF5EA; --bad:#A3392A;
+  --font-display:"Instrument Sans", "IBM Plex Sans", system-ui, sans-serif;
+  --font-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;letter-spacing:-.01em;text-wrap:balance;margin:0}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.bar{background:var(--surface);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:14px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--font-display);font-weight:700;font-size:17px}
+.brand svg{width:24px;height:24px}
+.tag{color:var(--muted);font-size:13px;border-left:1px solid var(--line);padding-left:14px}
+
+.bar .wrap{max-width:none;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:calc(100vh - 53px)}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;align-self:start;height:calc(100vh - 53px);padding-left:max(12px,env(safe-area-inset-left,0px))}
+.nav{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:8px 10px;border-radius:7px;color:var(--muted);font-weight:500;cursor:pointer;text-align:left;white-space:nowrap}
+.nav:hover{background:var(--sunk);color:var(--ink)}
+.nav[aria-current="page"]{background:var(--accent-weak);color:var(--accent)}
+.nav span:first-of-type{flex:1}
+.nbadge{font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--warn);background:var(--warn-weak);border-radius:999px;padding:0 7px;line-height:18px}
+.ndot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.side-sep{height:1px;background:var(--line);margin:10px 6px}
+.lhead{display:flex;align-items:center;justify-content:space-between;padding:4px 10px 4px;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.lhead .btn{text-transform:none;letter-spacing:0;font-weight:500;padding:2px 8px}
+.lists{display:grid;gap:1px;overflow:auto;max-height:42vh;min-height:0}
+.litem{display:grid;gap:0;width:100%;border:0;background:none;padding:6px 10px;border-radius:7px;cursor:pointer;text-align:left;color:var(--ink)}
+.litem:hover{background:var(--sunk)}
+.litem[aria-current="true"]{background:var(--accent-weak)}
+.litem .ln{font-size:13.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.litem .lm{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.lempty{font-size:12.5px;color:var(--faint);padding:4px 10px 6px;line-height:1.4}
+.nav.mobile-only{display:none}
+.listname{font:inherit;color:inherit;letter-spacing:inherit;border:1px solid transparent;border-radius:6px;background:none;padding:0 6px;margin-left:-7px;width:min(100%,640px)}
+.listname:hover:not(:disabled){border-color:var(--line-strong)}
+.listname:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.listname:disabled{color:inherit;opacity:1}
+.pagehead .sub{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;color:var(--muted);margin-top:2px}
+.pagehead .saved{display:inline-flex;align-items:center;gap:6px}
+.pagehead .saved::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.pagehead .saved.busy::before{background:var(--faint)}
+.pagehead .saved.err{color:var(--bad)}.pagehead .saved.err::before{background:var(--bad)}
+.confirm{display:inline-flex;gap:6px;align-items:center;color:var(--ink)}
+.vlists{padding:6px 10px}
+.side-foot{margin-top:auto;padding:0 2px}
+.content{padding:28px max(20px,env(safe-area-inset-right,0px)) 40px 28px;display:grid;gap:18px;align-content:start;min-width:0;max-width:1160px}
+.view{display:grid;gap:18px;min-width:0}
+.view>*,.content>*,.shell>*{min-width:0}
+.side-foot .btn{white-space:normal;text-align:left}
+.quietline{margin:0;font-size:12.5px;color:var(--faint)}
+.help{padding:6px 22px}
+.hs{padding:16px 0;border-bottom:1px solid var(--line)}
+.hs:last-child{border-bottom:0}
+.hs h2{font-size:15px;margin-bottom:4px}
+.hs p{margin:4px 0;color:var(--ink);max-width:75ch}
+.hs ul{margin:4px 0;padding-left:20px;display:grid;gap:3px;max-width:75ch}
+.help.privacy ul{padding:16px 0 16px 20px;margin:0;display:grid;gap:8px;font-size:14px;color:var(--ink)}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:static;height:auto;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px max(16px,env(safe-area-inset-left,0px))}
+  .nav{width:auto}
+  .side-sep,.side-foot,.lblock{display:none}
+  .nav.mobile-only{display:flex}
+  .content{padding:20px max(16px,env(safe-area-inset-right,0px)) 32px max(16px,env(safe-area-inset-left,0px))}
+}
+.pagehead h1{font-size:21px}
+.pagehead p{color:var(--muted);margin:2px 0 0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+
+/* compacte upload */
+.drop{display:flex;align-items:center;gap:16px;padding:18px 20px;border:1.5px dashed var(--line-strong);border-radius:10px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s;flex-wrap:wrap}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-weak)}
+.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.drop input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.drop .ic{width:40px;height:40px;border-radius:9px;background:var(--accent-weak);display:grid;place-items:center;flex:none}
+.drop .txt{flex:1;min-width:200px}
+.drop .t1{font-weight:600}
+.drop .t2{color:var(--muted);font-size:13px}
+.drop .sidebtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+.pastebox{margin-top:10px;padding:14px 16px;display:grid;gap:8px}
+.pastebox label{font-size:13px;font-weight:600}
+.pastebox textarea{width:100%;resize:vertical;min-height:140px;border:1px solid var(--line-strong);border-radius:7px;padding:9px 11px;font:13px/1.5 var(--font-body);color:var(--ink);background:var(--surface)}
+.pastebox textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-weak)}
+.prow{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.phint{margin-right:auto;font-size:12.5px;color:var(--muted)}
+.queue{margin-top:10px;display:grid;gap:4px}
+.queue[hidden]{display:none}
+.qhead{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);padding:0 2px}
+.qlist{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:200px;overflow:auto}
+.qitem{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--line);border-radius:7px;font-size:13px}
+.qitem .ext{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;text-transform:uppercase}
+.qitem .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qitem .st{color:var(--muted);text-align:right;font-size:12.5px}
+.qitem.done .st{color:var(--accent)}
+.qitem.err .st{color:var(--bad)}
+.qitem.busy .st::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-right:6px;animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.25}to{opacity:1}}
+#qempty{display:none}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);background:var(--surface);border-radius:7px;padding:7px 13px;font-weight:500;cursor:pointer;white-space:nowrap;line-height:1.3}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.small{padding:4px 10px;font-size:12.5px}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.btn.quiet:hover{color:var(--ink);background:var(--sunk)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.notice{padding:9px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-size:13.5px;color:var(--ink)}
+.notice.warn{border-color:#EAD8B8;background:var(--warn-weak)}
+.notice.info{border-color:#CFE3D8;background:var(--accent-weak)}
+
+/* overzicht */
+.overview{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:flex-end;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+.ov-label{font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center}
+.ov-label .badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--sunk);border-radius:4px;padding:1px 7px}
+.ov-big{font-family:var(--font-display);font-size:24px;font-weight:700;margin:2px 0 8px;font-variant-numeric:tabular-nums}
+.counts{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counts b{color:var(--ink);font-weight:600;margin-right:5px}
+.counts .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.ov-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.tabs{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--line);align-items:flex-end;flex-wrap:wrap}
+.tab{border:0;background:none;padding:10px 12px 9px;border-bottom:2px solid transparent;color:var(--muted);font-weight:500;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tab .n{font-variant-numeric:tabular-nums;margin-left:6px;font-size:12px;color:var(--faint)}
+.tabs .spacer{flex:1}
+.tabs .basenote{font-size:12.5px;color:var(--muted);padding:0 0 10px}
+
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+th{text-align:left;font-weight:500;font-size:12px;color:var(--muted);padding:10px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--sunk)}
+tbody tr:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tbody tr.sel td{background:var(--accent-weak)}
+th:first-child,td:first-child{padding-left:22px;width:34px}
+th:last-child,td:last-child{padding-right:22px}
+.empty-cell{color:var(--faint)}
+.fieldwarn{color:var(--warn)}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.st.warn{color:var(--warn)}
+.st.ok{color:var(--accent)}
+.sicon{width:16px;height:16px;display:block}
+.rep{font-size:11.5px;color:var(--faint);margin-left:6px}
+.emptyrow td{text-align:center;color:var(--muted);padding:40px 20px;cursor:default;white-space:normal}
+.emptyrow:hover td{background:none}
+
+/* zijpaneel */
+.scrim{position:fixed;inset:0;background:rgba(20,28,24,.18);z-index:20}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);border-left:1px solid var(--line);z-index:21;display:flex;flex-direction:column;box-shadow:-8px 0 30px rgba(0,0,0,.08);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.p-head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.p-head h2{font-size:16px;flex:1}
+.p-pos{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.iconbtn{border:0;background:none;width:30px;height:30px;border-radius:6px;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.iconbtn:hover{background:var(--sunk);color:var(--ink)}
+.iconbtn:disabled{opacity:.35;cursor:default;background:none}
+.p-body{flex:1;overflow:auto;padding:18px 20px;display:grid;gap:14px;align-content:start}
+.p-summary{font-size:13px;color:var(--muted)}
+.p-summary.warn{color:var(--warn)}
+.fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+.fld input{width:100%;border:1px solid var(--line-strong);border-radius:7px;padding:7px 10px;background:var(--surface)}
+.fld input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-weak)}
+.fld.has-warn input{border-color:#DDBF8A}
+.fld .msg{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;color:var(--warn);margin-top:5px;line-height:1.35}
+.fld .msg svg{flex:none;margin-top:1px}
+.p-src{border-top:1px solid var(--line);padding-top:14px}
+.p-src h3{font-family:var(--font-body);font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px}
+.snip{font-family:var(--font-mono);font-size:12px;background:var(--sunk);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+.snip+.snip{margin-top:6px}
+.snip span{display:block;color:var(--muted);font-family:var(--font-body);font-size:11.5px;margin-bottom:2px}
+.p-note{font-size:12.5px;color:var(--muted)}
+.p-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:14px 20px;border-top:1px solid var(--line)}
+
+.success{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--accent-weak);border:1px solid #CFE3D8;flex-wrap:wrap}
+.success .msg{flex:1;min-width:220px;font-size:14px}
+.success .msg b{font-weight:600}
+.success .sub{color:var(--muted)}
+.fixlink{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left;text-decoration:underline;text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);text-underline-offset:3px}
+.fixlink:hover{text-decoration-color:currentColor}
+.issues{display:grid;gap:6px;background:var(--warn-weak);border-radius:8px;padding:10px 12px}
+.issues .it{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--warn)}
+.issues .it svg{flex:none;margin-top:2px}
+.issues .it .go{margin-left:auto;font-size:12.5px;color:var(--warn);font-weight:500;white-space:nowrap}
+
+.merge{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 20px}
+.merge .ic{width:40px;height:40px;border-radius:9px;background:var(--sunk);display:grid;place-items:center}
+.merge h2{font-size:15px}
+.merge p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:70ch}
+.merge .state{margin-top:6px;font-size:13px;color:var(--ink)}
+.merge .state b{font-weight:600}
+.merge .acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:640px){.merge{grid-template-columns:minmax(0,1fr)}.merge .ic{display:none}.merge .acts{justify-content:flex-start}}
+
+footer.wrap{padding-block:4px 32px}
+.privacy{border-top:1px solid var(--line);padding-top:16px;display:grid;gap:4px;max-width:92ch}
+.privacy h2{font-family:var(--font-body);font-size:12.5px;font-weight:600;color:var(--muted)}
+.privacy ul{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;display:grid;gap:2px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:center;font-size:13.5px;box-shadow:0 6px 24px rgba(0,0,0,.18);max-width:calc(100% - 32px);z-index:30}
+.toast button{background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;font-weight:600}
+@media (max-width:640px){.tag{display:none}.overview{padding:16px}.tabs{padding:0 16px}th:first-child,td:first-child{padding-left:16px}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style>[hidden]{display:none!important}body{margin:0}</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="var(--accent)"/><path d="M5.5 8.5h13M5.5 12h13M5.5 15.5h13M10 5.5v13" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+      Overtyp
+    </div>
+    <span class="tag">Contact details from documents and emails to Excel</span>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="side" aria-label="Menu">
+    <button class="nav" data-go="verwerken"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/></svg><span>Process</span></button>
+    <button class="nav" data-go="controle"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg><span>Needs review</span><span class="nbadge" id="navCheck" hidden></span></button>
+    <button class="nav" data-go="lijst"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg><span>Existing Excel list</span><span class="ndot" id="navBase" hidden title="List selected"></span></button>
+    <button class="nav mobile-only" data-go="lijsten"><span>My lists</span></button>
+    <div class="lblock">
+      <div class="side-sep"></div>
+      <div class="lhead"><span>My lists</span><button class="btn quiet small" id="newListBtn" title="Start a new list">+ New</button></div>
+      <div class="lists" id="sideLists"></div>
+    </div>
+    <div class="side-sep"></div>
+    <button class="nav" data-go="hulp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.8M12 17h.01"/></svg><span>Help</span></button>
+    <button class="nav" data-go="privacy"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/></svg><span>Privacy</span></button>
+    <div class="side-foot"><button class="btn quiet small" id="tryBtn">Try with sample files</button></div>
+  </nav>
+
+  <main class="content">
+  <div id="notice" class="notice" role="status" hidden></div>
+
+    <div class="view" data-view="verwerken">
+  <div class="pagehead">
+    <h1><input id="listName" class="listname" value="Process documents" aria-label="List name" disabled maxlength="120"></h1>
+    <div class="sub" id="pageSub"></div>
+  </div>
+  <div>
+    <label class="drop" id="drop" for="file">
+      <input type="file" id="file" multiple accept=".pdf,.docx,.xlsx,.xls,.csv,.eml,.msg,.txt,.png,.jpg,.jpeg,.webp">
+      <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="txt">
+        <span class="t1">Add documents</span><br>
+        <span class="t2">Drag files here or paste text with Ctrl+V · PDF, scan, Word, Excel, CSV or email</span>
+      </span>
+      <span class="sidebtns"><button type="button" class="btn" id="pasteBtn">Paste text</button><span class="btn">Choose files</span></span>
+    </label>
+    <div class="pastebox card" id="pastebox" hidden>
+      <label for="pasteText">Paste the text of an email, list or document</label>
+      <textarea id="pasteText" rows="8" spellcheck="false" placeholder="For example, open the email, press Ctrl+A and then Ctrl+C, and paste here with Ctrl+V."></textarea>
+      <div class="prow"><span class="phint" id="pasteCount"></span><button type="button" class="btn quiet" id="pasteCancel">Cancel</button><button type="button" class="btn primary" id="pasteGo">Find contacts</button></div>
+    </div>
+    <div class="queue" id="queue" hidden>
+      <div class="qhead"><span>Files</span><button class="btn small quiet" id="stop" hidden>Stop</button></div>
+      <ul class="qlist" id="qlist"></ul>
+      <span id="qempty"></span>
+    </div>
+  </div>
+  <div class="success" id="success" role="status" hidden>
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="var(--accent)"/><path d="m7.5 12.3 3 3 6-6.6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="msg" id="successMsg"></span>
+    <button class="btn small" id="successAct"></button>
+    <button class="iconbtn" id="successClose" aria-label="Dismiss"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <section class="card" aria-label="Results" id="results">
+    <div class="overview">
+      <div>
+        <div class="ov-label" id="ovLabel"></div>
+        <div class="ov-big" id="ovBig"></div>
+        <div class="counts" id="counts"></div>
+      </div>
+      <div class="ov-actions">
+        <button class="btn" id="reviewBtn">Needs review</button>
+        <button class="btn primary" id="exportBtn">Export to Excel</button>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-all" aria-selected="true">All contacts<span class="n" id="n-all">0</span></button>
+      <button class="tab" role="tab" id="tab-check" aria-selected="false">Needs review<span class="n" id="n-check">0</span></button>
+      <span class="spacer"></span>
+      <span class="basenote" id="basenote"></span>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th><span hidden>Status</span></th><th>Name</th><th>Company</th><th>Job title</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+      <p class="quietline">Original files are not stored. Contacts found are saved privately in your own account. <button class="fixlink" data-go="privacy">More about privacy</button></p>
+    </div>
+
+    <div class="view" data-view="lijst" hidden>
+      <div class="pagehead"><h1>Existing Excel list</h1><p>Add new contacts to a list you already have, without duplicates.</p></div>
+  <section class="card merge" aria-labelledby="merge-h">
+    <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11M14 14h4M16 12v4"/></svg></span>
+    <div>
+      <h2 id="merge-h">Add to an existing Excel list</h2>
+      <p>Already have a customer or contact list? Choose it here. When you export, you get your own list back with only the new contacts added at the bottom, in your columns. Anyone already on it is skipped. Your original file stays unchanged.</p>
+      <div class="state" id="mergeState" hidden></div>
+    </div>
+    <div class="acts">
+      <label class="btn" for="baseFile" id="baseLabel">
+        <input type="file" id="baseFile" accept=".xlsx,.xls,.csv" hidden>
+        <span id="baseBtnText">Choose Excel list</span>
+      </label>
+      <button class="btn quiet" id="baseRemove" hidden>Stop merging</button>
+    </div>
+  </section>
+    </div>
+
+    <div class="view" data-view="lijsten" hidden>
+      <div class="pagehead"><h1>My lists</h1><p>Open a list to add new contacts to it.</p></div>
+      <section class="card vlists"><div class="lists" id="viewLists" style="max-height:none"></div></section>
+      <div><button class="btn" data-newlist>+ New list</button></div>
+    </div>
+
+    <div class="view" data-view="hulp" hidden>
+      <div class="pagehead"><h1>Help</h1><p>How to work with Overtyp.</p></div>
+      <section class="card help">
+        <div class="hs"><h2>Adding files</h2>
+          <p>Drag files into the "Add documents" box or click <b>Choose files</b>. This works with PDF (including scans), photos, Word, Excel, CSV and emails. You can add several files at once.</p></div>
+        <div class="hs"><h2>Adding an email</h2>
+          <p><b>Copy and paste:</b> open the email, press Ctrl+A and Ctrl+C, then press Ctrl+V in Overtyp. Attachments are not included this way.</p>
+          <p><b>As a file,</b> so attachments are read too:</p>
+          <ul>
+            <li>Outlook on your computer: drag the email to your desktop, then drag that file into Overtyp.</li>
+            <li>New Outlook or Outlook on the web: open the email, click … and choose Download.</li>
+            <li>Gmail: open the email, click ⋮ and choose Download message.</li>
+            <li>Apple Mail: drag the email to your desktop.</li>
+          </ul></div>
+        <div class="hs"><h2>Reviewing</h2>
+          <p>Contacts that don't look quite right are listed under <b>Needs review</b>. Click an underlined value or the row. Fix the field and click <b>Approve</b>; you go straight to the next contact.</p></div>
+        <div class="hs"><h2>Exporting</h2>
+          <p>Click <b>Export to Excel</b> and then <b>Save</b>. The file goes to your Downloads folder. Contacts that haven't been reviewed yet are on a separate "Needs review" sheet.</p></div>
+        <div class="hs"><h2>My lists</h2>
+          <p>Every run is saved automatically under <b>My lists</b> in the menu, named after the first file. Click the name at the top to rename it. Open a list again later to add new files or pasted text to it; duplicate contacts are merged. <b>+ New</b> starts an empty list.</p></div>
+        <div class="hs"><h2>Adding to an existing list</h2>
+          <p>Choose your own file under <b>Existing Excel list</b> in the menu. When you export, you get that list back with only the new contacts added at the bottom.</p></div>
+      </section>
+    </div>
+
+    <div class="view" data-view="privacy" hidden>
+      <div class="pagehead"><h1>Privacy and data processing</h1><p>What happens to your files and contact details.</p></div>
+      <section class="card help privacy">
+    <ul>
+      <li>Files are read in your own browser. The original files are not uploaded or stored.</li>
+      <li>To recognise contact details, the text of the document (for scans, the page image) is processed once by Claude, through your own Claude account.</li>
+      <li>The lists you create (the contact details found) are saved in your own Claude account so you can add to them later. Only you can see your lists; colleagues and the maker of Overtyp cannot.</li>
+      <li><b>Delete list</b> permanently erases a list and all contact details in it.</li>
+      <li>The Excel export is saved on your own computer. Only process data your organisation has a lawful basis for (GDPR).</li>
+    </ul>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="panel" id="panel" hidden aria-labelledby="p-title" role="dialog">
+  <div class="p-head">
+    <h2 id="p-title">Review contact</h2>
+    <span class="p-pos" id="p-pos"></span>
+    <button class="iconbtn" id="p-prev" aria-label="Previous"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="iconbtn" id="p-next" aria-label="Next"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+    <button class="iconbtn" id="p-close" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="p-body" id="p-body"></div>
+  <div class="p-foot" id="p-foot"></div>
+</aside>
+
+<div class="toast" id="toast" hidden><span id="toastMsg"></span><button id="undo">Undo</button></div>
+
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+
+"use strict";
+/* ---------- fields ---------- */
+const FIELDS=[["naam","Name"],["bedrijf","Company"],["functie","Job title"],["email","Email"],["telefoon","Phone"],["adres","Address"],["website","Website"],["linkedin","LinkedIn"]];
+const KEYS=FIELDS.map(f=>f[0]);
+const LABEL=Object.fromEntries(FIELDS);
+
+/* ---------- state ---------- */
+let contacts=[], seq=0, dupes=0, isExample=true, tab="check", base=null, lastDeleted=null;
+let sample=null, downloads=null, maxImg=0, running=false, stopReq=false, currentCtl=null;
+const ready=(async()=>{
+  if(!window.claude||!window.claude.use) return;
+  const [s,d]=await Promise.all([claude.use("sample"),claude.use("downloads")]);
+  sample=s; downloads=d;
+  if(sample){ try{ const l=await sample.limits(); maxImg=(l.images&&l.images.maxCount)||0; }catch(e){} }
+})();
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sq=s=>String(s??"").replace(/\s+/g," ").trim();
+const normName=s=>sq(s).toLowerCase().replace(/[^\p{L}\p{N} ]/gu,"");
+const normCo=s=>normName(s).replace(/\b(b\.?v\.?|n\.?v\.?|vof|v\.o\.f\.?|bv|nv)\b/g,"").trim();
+
+/* ---------- normalise and validate ---------- */
+const NL2=["10","13","15","20","23","24","26","30","33","35","36","38","40","43","45","46","50","53","55","58","70","71","72","73","74","75","76","77","78","79","85","88","97"];
+function normPhone(s){
+  let t=String(s).replace(/\(0\)/g,"").replace(/[^\d+]/g,"");
+  if(t.startsWith("00")) t="+"+t.slice(2);
+  if(/^0\d/.test(t)) t="+31"+t.slice(1);
+  if(t.startsWith("+31")){
+    const n=t.slice(3);
+    if(n.length!==9) return null;
+    if(n[0]==="6") return "+31 6 "+n.slice(1);
+    const ac=NL2.includes(n.slice(0,2))?n.slice(0,2):n.slice(0,3);
+    return "+31 "+ac+" "+n.slice(ac.length);
+  }
+  if(t.startsWith("+")){const d=t.slice(1); if(d.length>=8&&d.length<=15) return "+"+d;}
+  return null;
+}
+function normalize(c){
+  KEYS.forEach(k=>c[k]=sq(c[k]));
+  c.email=c.email.toLowerCase().replace(/^mailto:/,"").replace(/\s/g,"").replace(/[.,;]+$/,"");
+  if(c.telefoon){const p=normPhone(c.telefoon); if(p) c.telefoon=p;}
+  c.adres=c.adres.replace(/\b(\d{4})\s?([a-zA-Z]{2})\b(?=[\s,]|$)/,(m,a,b)=>a+" "+b.toUpperCase());
+  if(c.website){ if(!/^https?:\/\//i.test(c.website)) c.website="https://"+c.website; c.website=c.website.replace(/\/+$/,""); }
+  if(c.linkedin){ if(!/^https?:\/\//i.test(c.linkedin)) c.linkedin="https://"+c.linkedin.replace(/^\/+/,""); c.linkedin=c.linkedin.replace(/\/+$/,""); }
+}
+function validate(c){
+  const iss=[];
+  if(!c.naam) iss.push({f:"naam",m:c.bedrijf?"No contact person, only a company":"Name missing"});
+  else if(/@|\d{3,}/.test(c.naam)) iss.push({f:"naam",m:"Name doesn't look like a name"});
+  if(c.email&&!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(c.email)) iss.push({f:"email",m:"Email address incomplete or invalid"});
+  if(c.telefoon&&!normPhone(c.telefoon)) iss.push({f:"telefoon",m:"Phone number not recognised"});
+  if(c.website&&!/^https?:\/\/[^\s/]+\.[a-z]{2,}/i.test(c.website)) iss.push({f:"website",m:"Website looks invalid"});
+  if(c.linkedin&&!/linkedin\.com\/(in|company)\/[^\s]+/i.test(c.linkedin)) iss.push({f:"linkedin",m:"Not a valid LinkedIn link"});
+  if(!c.email&&!c.telefoon) iss.push({f:"email",m:"No email and no phone"});
+  else if(!c.email) iss.push({f:"email",m:"Email address missing"});
+  if(c.email&&c.naam&&nameEmailMismatch(c)) iss.push({f:"email",m:"Email address doesn't match the name"});
+  if(c.email&&c.bedrijf&&companyDomainMismatch(c)) iss.push({f:"bedrijf",m:"Company doesn't match the email domain"});
+  if(c.conf==="laag") iss.push({f:null,m:"Uncertain reading: "+(c.twijfel||"check the source")});
+  (c.conflicts||[]).forEach(x=>iss.push({f:x.f,m:`Different ${LABEL[x.f].toLowerCase()} in ${x.file}: ${x.v}`}));
+  c.issues=iss;
+  if(c.status!=="approved") c.status=iss.length?"check":"ok";
+}
+const FREEMAIL=/^(gmail|googlemail|hotmail|outlook|live|msn|yahoo|icloud|me|ziggo|kpnmail|kpnplanet|planet|xs4all|home|hetnet|telfort|online|chello|quicknet|zeelandnet|casema|upcmail|caiway|proton|protonmail)\./;
+function nameEmailMismatch(c){
+  const local=c.email.split("@")[0].toLowerCase();
+  const toks=local.split(/[._-]+/).filter(t=>/^[a-z]{2,}$/.test(t));
+  if(toks.length<2) return false;               // skip info@, j.jansen@ etc.
+  const lc=local.replace(/[^a-z]/g,"");
+  const parts=normName(c.naam).split(" ").filter(p=>p.length>=3&&!TV.includes(p));
+  if(!parts.length) return false;
+  const [,t,a]=splitName(c.naam), sur=normName(t+" "+a).replace(/ /g,"");
+  return !parts.some(p=>lc.includes(p))&&!(sur&&lc.includes(sur));
+}
+function companyDomainMismatch(c){
+  const dom=c.email.split("@")[1]||"";
+  if(!dom.includes(".")||FREEMAIL.test(dom)) return false;
+  const label=dom.split(".").slice(0,-1).join("").replace(/[^a-z0-9]/g,"");
+  const words=normCo(c.bedrijf).split(" ").map(w=>w.replace(/[^a-z0-9]/g,"")).filter(w=>w.length>=3&&!["groep","group","holding","the","van","den","der","en","and"].includes(w));
+  if(!words.length) return false;
+  return !words.some(w=>label.includes(w));
+}
+function validateAll(){
+  contacts.forEach(validate);
+  const byEmail={};
+  contacts.forEach(c=>{ if(c.email) (byEmail[c.email]=byEmail[c.email]||[]).push(c); });
+  Object.values(byEmail).forEach(g=>{
+    const names=[...new Set(g.map(c=>normName(c.naam)).filter(Boolean))];
+    if(names.length<2) return;                    // same person repeated: not an error
+    const misfit=g.filter(c=>c.naam&&nameEmailMismatch(c));
+    const flag=misfit.length?misfit:g;            // flag whoever doesn't match the address
+    flag.forEach(c=>{ const others=[...new Set(g.filter(o=>normName(o.naam)!==normName(c.naam)).map(o=>o.naam||o.bedrijf||"another contact"))];
+      c.issues.push({f:"email",m:"Same email address as "+others.join(", ")});
+      if(c.status!=="approved") c.status="check"; });
+  });
+  // same person several times with different details: note only
+  const byPerson={};
+  contacts.forEach(c=>{ c.repeat=0; const k=normName(c.naam)+"|"+(c.email||normCo(c.bedrijf)); if(normName(c.naam)) (byPerson[k]=byPerson[k]||[]).push(c); });
+  Object.values(byPerson).forEach(g=>{ if(g.length>1) g.forEach(c=>c.repeat=g.length); });
+}
+function sameContact(a,b){
+  if(a.email&&b.email){
+    if(a.email!==b.email) return false;
+    const na=normName(a.naam), nb=normName(b.naam);
+    return !na||!nb||na===nb;                    // same email, different name: don't merge, but flag
+  }
+  const na=normName(a.naam), nb=normName(b.naam);
+  if(!na||na!==nb) return false;
+  const ca=normCo(a.bedrijf), cb=normCo(b.bedrijf);
+  return !ca||!cb||ca===cb;
+}
+// "Verhoef Catering" and "Verhoef Catering B.V." are the same company
+const sameValue=(k,a,b)=>k==="bedrijf"?normCo(a)===normCo(b):normName(a)===normName(b);
+function addContacts(found,label){
+  let added=0;
+  for(const r of found){
+    const c={id:++seq,conf:r.conf||"middel",twijfel:r.twijfel||"",bron:[{file:label,snippet:r.snippet||""}],conflicts:[],status:null};
+    KEYS.forEach(k=>c[k]=r[k]||"");
+    normalize(c);
+    if(!c.naam&&!c.email&&!c.telefoon&&!c.bedrijf) continue;
+    // only merge when nothing conflicts; otherwise keep separate rows
+    const m=contacts.find(x=>sameContact(x,c)&&!KEYS.some(k=>k!=="naam"&&x[k]&&c[k]&&!sameValue(k,x[k],c[k])));
+    if(m){
+      KEYS.forEach(k=>{ if(!m[k]&&c[k]) m[k]=c[k]; });
+      if(c.conf==="laag"&&m.conf!=="laag"){m.conf="laag";m.twijfel=c.twijfel;}
+      m.bron.push(...c.bron); dupes++;
+    } else { contacts.push(c); added++; }
+  }
+  validateAll();
+  if(base) markExisting();
+  return added;
+}
+
+/* ---------- reading files ---------- */
+const extOf=n=>(String(n).split(".").pop()||"").toLowerCase();
+const KIND={pdf:"PDF",docx:"Word document",xlsx:"Excel file",xls:"Excel file",csv:"CSV file",eml:"email",msg:"Outlook email",txt:"text file",png:"image",jpg:"image",jpeg:"image",webp:"image"};
+
+async function readFile(file){
+  const ext=extOf(file.name), kind=KIND[ext];
+  if(!kind) return {kind:"unknown",unsupported:true};
+  if(ext==="pdf") return readPdf(file);
+  if(ext==="docx") return {kind,text:await readDocx(file)};
+  if(ext==="xlsx"||ext==="xls"||ext==="csv"){
+    const wb=ext==="csv"?XLSX.read(await file.text(),{type:"string"}):XLSX.read(await file.arrayBuffer(),{type:"array"});
+    return {kind,text:wb.SheetNames.map(n=>(wb.SheetNames.length>1?`[Sheet ${n}]\n`:"")+XLSX.utils.sheet_to_csv(wb.Sheets[n],{blankrows:false})).join("\n\n")};
+  }
+  if(ext==="eml"){const e=parseEml(await file.text()); return {kind,text:e.text,attachments:e.attachments};}
+  if(ext==="msg") return {kind,text:await readMsg(file)};
+  if(ext==="txt") return {kind,text:await file.text()};
+  return {kind,images:[file]};
+}
+async function readPdf(file){
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  let text="", images=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    let t=""; for(const it of tc.items){ t+=(it.str||"")+(it.hasEOL?"\n":" "); }
+    if(t.replace(/\s/g,"").length>=40){ text+=`\n[Page ${p}]\n`+t; }
+    else if(images.length<30){
+      const v1=page.getViewport({scale:1}), scale=Math.min(2,1600/v1.width), vp=page.getViewport({scale});
+      const cv=document.createElement("canvas"); cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+      const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+      await page.render({canvasContext:ctx,viewport:vp}).promise;
+      images.push(await new Promise(r=>cv.toBlob(r,"image/jpeg",0.85)));
+    }
+  }
+  return {kind:images.length&&!text?"scanned PDF":"PDF",text,images};
+}
+function htmlToText(html){
+  const d=new DOMParser().parseFromString(html,"text/html");
+  d.querySelectorAll("script,style").forEach(e=>e.remove());
+  d.querySelectorAll("tr").forEach(tr=>tr.replaceWith(d.createTextNode("\n"+[...tr.children].map(td=>sq(td.textContent)).join(" | ")+"\n")));
+  d.querySelectorAll("p,div,li,h1,h2,h3,h4,h5,br,table").forEach(e=>e.append("\n"));
+  return (d.body?d.body.textContent:"").replace(/\n{3,}/g,"\n\n");
+}
+async function readDocx(file){
+  const r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});
+  return htmlToText(r.value);
+}
+async function readMsg(file){
+  const buf=new Uint8Array(await file.arrayBuffer());
+  const u16=new TextDecoder("utf-16le").decode(buf.subarray(0,buf.length-(buf.length%2)));
+  const a=u16.match(/[\p{L}\p{N}\p{P}\p{Zs}@+\r\n\t]{6,}/gu)||[];
+  const l1=new TextDecoder("windows-1252").decode(buf);
+  const b=l1.match(/[\x20-\x7E\r\n\tÀ-ÿ]{10,}/g)||[];
+  const seen=new Set(), out=[];
+  for(const s of [...a,...b]){const k=sq(s); if(k.length>=6&&!seen.has(k)&&/[a-z]/i.test(k)){seen.add(k);out.push(k);}}
+  return out.join("\n").slice(0,60000);
+}
+
+/* ---------- e-mail (MIME) ---------- */
+function b64ToBytes(s){const bin=atob(s.replace(/[^A-Za-z0-9+/=]/g,"")); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u;}
+function qpToBytes(s){s=s.replace(/=\r?\n/g,""); const out=[]; for(let i=0;i<s.length;i++){ if(s[i]==="="&&/^[0-9A-F]{2}$/i.test(s.substr(i+1,2))){out.push(parseInt(s.substr(i+1,2),16));i+=2;} else { const c=s.charCodeAt(i); if(c<128) out.push(c); else out.push(...new TextEncoder().encode(s[i])); } } return new Uint8Array(out);}
+function decodeBytes(u,cs){try{return new TextDecoder(cs||"utf-8").decode(u);}catch(e){return new TextDecoder("utf-8").decode(u);}}
+function decodeWords(s){return String(s||"").replace(/=\?([^?]+)\?([bqBQ])\?([^?]*)\?=/g,(m,cs,enc,txt)=>decodeBytes(enc.toUpperCase()==="B"?b64ToBytes(txt):qpToBytes(txt.replace(/_/g," ")),cs)).replace(/\?=\s+=\?/g,"");}
+function parseEml(raw){
+  raw=raw.replace(/\r\n/g,"\n");
+  const texts=[], attachments=[];
+  function split(src){
+    const i=src.indexOf("\n\n"); const head=i<0?src:src.slice(0,i), body=i<0?"":src.slice(i+2);
+    const h={}; head.replace(/\n[ \t]+/g," ").split("\n").forEach(l=>{const k=l.indexOf(":"); if(k>0){const key=l.slice(0,k).trim().toLowerCase(); if(!(key in h)) h[key]=l.slice(k+1).trim();}});
+    return {h,body};
+  }
+  function walk(src,depth){
+    const {h,body}=split(src);
+    const ct=h["content-type"]||"text/plain";
+    const bm=ct.match(/boundary="?([^";]+)"?/i);
+    if(/multipart\//i.test(ct)&&bm){
+      body.split("--"+bm[1]).slice(1).forEach(seg=>{ if(seg.startsWith("--")) return; walk(seg.replace(/^\n/,""),depth+1); });
+      return h;
+    }
+    if(/message\/rfc822/i.test(ct)){ const inner=walk(body,depth+1); texts.push(hdr(inner,"Forwarded message")); return h; }
+    const enc=(h["content-transfer-encoding"]||"").toLowerCase();
+    const disp=h["content-disposition"]||"";
+    const fnm=disp.match(/filename\*?="?([^";]+)"?/i)||ct.match(/name\*?="?([^";]+)"?/i);
+    const cs=(ct.match(/charset="?([^";]+)"?/i)||[])[1];
+    if(fnm||/attachment/i.test(disp)||!/^text\//i.test(ct)){
+      if(fnm&&enc==="base64"){
+        const name=decodeWords(fnm[1]).replace(/^utf-8''/i,"");
+        const bytes=b64ToBytes(body); const e=extOf(name);
+        const isImg=["png","jpg","jpeg","webp"].includes(e);
+        if(KIND[e]&&(!isImg||bytes.length>60000)) attachments.push(new File([bytes],name));
+      }
+      return h;
+    }
+    let txt=enc==="base64"?decodeBytes(b64ToBytes(body),cs):enc==="quoted-printable"?decodeBytes(qpToBytes(body),cs):body;
+    if(/text\/html/i.test(ct)) txt=htmlToText(txt);
+    texts.push(txt);
+    return h;
+  }
+  function hdr(h,title){return `--- ${title} ---\n`+["from","to","cc","reply-to","subject","date"].filter(k=>h[k]).map(k=>({from:"From",to:"To",cc:"Cc","reply-to":"Reply-To",subject:"Subject",date:"Date"}[k])+": "+decodeWords(h[k])).join("\n");}
+  const top=walk(raw,0);
+  // als er zowel platte tekst als html is, alleen de langste variant houden zou info kunnen missen; dubbele regels weghalen
+  const seen=new Set(), lines=[];
+  texts.join("\n\n").split("\n").forEach(l=>{const k=sq(l); if(!k){lines.push("");return;} if(seen.has(k)) return; seen.add(k); lines.push(l.trimEnd());});
+  return {text:hdr(top,"Email")+"\n\n"+lines.join("\n").replace(/\n{3,}/g,"\n\n"),attachments};
+}
+
+/* ---------- Claude ---------- */
+function prompt(label,kind,body){
+  return `You are a careful data-entry clerk. Extract every contact person from ${body?"the source below":"the attached image(s)"}. Source: "${label}" (${kind}).
+
+Reply with ONLY a JSON array, no explanation. Every element has exactly these fields, all strings (keep these field names exactly):
+{"naam":"","bedrijf":"","functie":"","email":"","telefoon":"","adres":"","website":"","linkedin":"","zekerheid":"hoog","twijfel":"","bron":""}
+Meaning: naam = full name, bedrijf = company, functie = job title, telefoon = phone, adres = address, zekerheid = confidence, twijfel = reason for doubt, bron = source line.
+
+Rules:
+- One element per person. Only copy details that appear in the source. Never invent or complete anything. Unknown = "".
+- A company without a contact person: company name in "bedrijf", "naam" empty.
+- adres: street and number, postcode and city on one line.
+- zekerheid is "hoog" (high), "middel" (medium) or "laag" (low). Choose "laag" when text is hard to read or cut off, when it is unclear which detail belongs to which person, or when you had to guess. Then put in "twijfel" why, in at most 8 English words.
+- bron: the line from the source where this person appears, verbatim, at most 120 characters.
+- In emails: include senders, recipients with a name and people in signatures. Skip system addresses such as noreply.
+- No contact persons found: reply [].`+(body?`\n\nSOURCE:\n"""\n${body}\n"""`:"");
+}
+async function askClaude(label,kind,unit){
+  currentCtl=new AbortController();
+  const opts={signal:currentCtl.signal};
+  if(unit.images) opts.images=unit.images;
+  const data=await sample.json(prompt(label,kind,unit.text||""),opts);
+  const arr=Array.isArray(data)?data:(data&&(data.contacten||data.contacts))||[];
+  return arr.filter(o=>o&&typeof o==="object").map(o=>{
+    const r={}; KEYS.forEach(k=>r[k]=String(o[k]??""));
+    r.conf=["hoog","middel","laag"].includes(o.zekerheid)?o.zekerheid:"middel";
+    r.twijfel=String(o.twijfel||""); r.snippet=String(o.bron||"").slice(0,160);
+    return r;
+  });
+}
+function chunks(text,max=9000){
+  const out=[]; let cur="";
+  for(let l of text.split("\n")){
+    while(l.length>max){ if(cur){out.push(cur);cur="";} out.push(l.slice(0,max)); l=l.slice(max); }
+    if(cur.length+l.length>max&&cur){out.push(cur);cur="";}
+    cur+=l+"\n";
+  }
+  if(cur.trim()) out.push(cur);
+  return out;
+}
+
+/* ---------- processing ---------- */
+const queueItems=[], pending=[];
+function addQ(label,file){
+  const li=document.createElement("li"); li.className="qitem";
+  li.innerHTML=`<span class="ext">${esc(extOf(file.name)||"?")}</span><span class="nm" title="${esc(label)}">${esc(label)}</span><span class="st">Waiting</span>`;
+  $("qlist").appendChild(li); $("qempty").hidden=true; $("queue").hidden=false;
+  const q={label,file,li}; queueItems.push(q); return q;
+}
+function setQ(q,msg,cls){ q.li.className="qitem"+(cls?" "+cls:""); q.li.querySelector(".st").textContent=msg; }
+function notice(msg,info){ const n=$("notice"); n.textContent=msg; n.className="notice"+(info?" info":""); n.hidden=!msg; }
+
+async function processFiles(files){
+  if(!files.length) return;
+  const jobs=[...files].map(f=>addQ(f.name,f));
+  if(running){ pending.push(...jobs); return; }
+  pending.push(...jobs);
+  await ready;
+  if(!sample){ notice("Recognising contacts only works when this page is opened in Claude. Open the link in claude.ai or the Claude app."); pending.forEach(q=>setQ(q,"Not processed","err")); pending.length=0; return; }
+  if(isExample){ contacts=[]; dupes=0; isExample=false; tab="all"; render(); }
+  notice("");
+  running=true; stopReq=false; lastRun=new Date(); successOn=false; runStart=contacts.length; $("stop").hidden=false;
+  while(pending.length&&!stopReq){
+    const q=pending.shift();
+    setQ(q,"Reading…","busy");
+    let doc;
+    try{ doc=await readFile(q.file); }catch(e){ setQ(q,"Could not open file","err"); continue; }
+    if(doc.unsupported){ setQ(q,"Format not supported","err"); continue; }
+    (doc.attachments||[]).forEach(a=>pending.unshift(addQ(q.label+" › "+a.name,a)));
+    const units=[];
+    if(doc.text&&doc.text.trim()) chunks(doc.text).forEach(t=>units.push({text:t}));
+    let skippedImgs=false;
+    if(doc.images&&doc.images.length){
+      if(!maxImg) skippedImgs=true;
+      else { const n=Math.min(maxImg,3); for(let i=0;i<doc.images.length;i+=n) units.push({images:doc.images.slice(i,i+n)}); }
+    }
+    if(!units.length){ setQ(q,skippedImgs?"Scans are not supported here":"No text found","err"); continue; }
+    let found=[], failed=null;
+    for(let i=0;i<units.length&&!stopReq;i++){
+      setQ(q,units.length>1?`Finding contacts, part ${i+1} of ${units.length}`:"Finding contacts…","busy");
+      try{ found.push(...await askClaude(q.label,doc.kind,units[i])); }
+      catch(e){
+        const code=e&&e.code;
+        if(code==="cancelled") break;
+        if(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(code)){
+          notice("Overtyp is not allowed to use Claude in this view. Allow it when Claude asks, and try again."); stopReq=true; failed="Stopped"; break;
+        }
+        if(code==="rate_limited"){ notice("Too many requests for now. Wait a few minutes and upload the remaining files again."); stopReq=true; failed="Stopped"; break; }
+        failed=code==="invalid_json"?"Reply unreadable":code==="prompt_too_large"?"Too large":code==="image_rejected"?"Scan unreadable":"Processing error";
+      }
+    }
+    addContacts(found,q.label); afterChange(q.label);
+    const extra=found.length?`${found.length} contact${found.length===1?"":"s"}`:"No contacts";
+    if(stopReq&&!found.length) setQ(q,failed||"Stopped","err");
+    else if(failed&&!found.length) setQ(q,failed,"err");
+    else setQ(q,extra+(failed?" (partly: "+failed.toLowerCase()+")":"")+(skippedImgs?", scans skipped":""),failed?"err":"done");
+    render();
+  }
+  pending.forEach(q=>setQ(q,"Not processed","err")); pending.length=0;
+  running=false; $("stop").hidden=true; successOn=contacts.length>0;
+    render();
+}
+
+/* ---------- existing Excel ---------- */
+const HEADER_RULES=[["linkedin",/linked\s*in/i],["email",/e-?mail|mailadres/i],["telefoon",/tel|phone|mobiel|gsm|nummer/i],["website",/website|^url$|^site$|webadres/i],["adres",/adres|address|straat/i],["functie",/functie|title|^rol$|job|positie/i],["bedrijf",/bedrijf|organisatie|company|firma|klant/i],["voornaam",/voornaam|first/i],["tussenvoegsel",/tussen/i],["achternaam",/achternaam|last|surname/i],["naam",/naam|name|contact/i]];
+const fieldFor=h=>{const r=HEADER_RULES.find(([,re])=>re.test(String(h))); return r?r[0]:null;};
+const TV=["van","de","der","den","het","ter","ten","te","in","'t","op","von","du","la","le","da","dos","del"];
+function splitName(n){
+  const p=sq(n).split(" ").filter(Boolean); if(!p.length) return ["","",""];
+  if(p.length===1) return [p[0],"",""];
+  const v=p[0]; let i=1; const tv=[];
+  while(i<p.length-1&&TV.includes(p[i].toLowerCase())) tv.push(p[i++]);
+  return [v,tv.join(" "),p.slice(i).join(" ")];
+}
+async function loadBase(file){
+  const ext=extOf(file.name);
+  const wb=ext==="csv"?XLSX.read(await file.text(),{type:"string"}):XLSX.read(await file.arrayBuffer(),{type:"array"});
+  const sheet=wb.SheetNames[0], ws=wb.Sheets[sheet];
+  const headers=(XLSX.utils.sheet_to_json(ws,{header:1})[0]||[]).map(String);
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
+  const map={}; headers.forEach(h=>{const f=fieldFor(h); if(f&&!Object.values(map).includes(f)) map[h]=f;});
+  if(!Object.values(map).some(f=>["email","naam","voornaam","achternaam"].includes(f))) throw new Error("kolommen");
+  base={name:file.name,sheet,headers,rows,map};
+  markExisting(); render();
+  notice("");
+}
+function baseKeySets(){
+  const emails=new Set(), names=new Set(); const inv={}; Object.entries(base.map).forEach(([h,f])=>inv[f]=h);
+  base.rows.forEach(r=>{
+    if(inv.email&&r[inv.email]) emails.add(String(r[inv.email]).trim().toLowerCase());
+    const nm=inv.naam?r[inv.naam]:[r[inv.voornaam]||"",r[inv.tussenvoegsel]||"",r[inv.achternaam]||""].join(" ");
+    if(sq(nm)) names.add(normName(nm));
+  });
+  return {emails,names};
+}
+function markExisting(){
+  const {emails,names}=baseKeySets();
+  contacts.forEach(c=>c.exists=(c.email&&emails.has(c.email))||(!!c.naam&&names.has(normName(c.naam))));
+}
+
+/* ---------- export ---------- */
+function valueFor(c,f){
+  const [v,t,a]=splitName(c.naam);
+  return {voornaam:v,tussenvoegsel:t,achternaam:a}[f]??c[f]??"";
+}
+const OUT_COLS=[["voornaam","First name"],["tussenvoegsel","Name prefix"],["achternaam","Last name"],["bedrijf","Company"],["functie","Job title"],["email","Email"],["telefoon","Phone"],["adres","Address"],["website","Website"],["linkedin","LinkedIn"]];
+async function exportXlsx(){
+  if(!contacts.length){ notice("There are no contacts to export yet."); return; }
+  await ready;
+  const fresh=contacts.filter(c=>!c.exists);
+  const good=fresh.filter(c=>c.status!=="check"), check=fresh.filter(c=>c.status==="check");
+  const wb=XLSX.utils.book_new();
+  let header, rows;
+  if(base){
+    header=[...base.headers];
+    const map={...base.map}, used=new Set(Object.values(map));
+    const nameCovered=used.has("naam")||used.has("voornaam")||used.has("achternaam");
+    OUT_COLS.forEach(([f,l])=>{
+      if(["voornaam","tussenvoegsel","achternaam"].includes(f)){ if(nameCovered) return; }
+      else if(used.has(f)) return;
+      let col=l; while(header.includes(col)) col+=" (new)";
+      header.push(col); map[col]=f;
+    });
+    const val=(c,f)=>{
+      if(f==="achternaam"&&!used.has("tussenvoegsel")&&nameCovered){ const [,t,a]=splitName(c.naam); return sq(t+" "+a); }
+      return valueFor(c,f);
+    };
+    rows=base.rows.map(r=>({...r}));
+    good.forEach(c=>{const o={}; header.forEach(h=>{const f=map[h]; o[h]=f?val(c,f):"";}); rows.push(o);});
+  } else {
+    header=OUT_COLS.map(x=>x[1]);
+    rows=good.map(c=>Object.fromEntries(OUT_COLS.map(([f,l])=>[l,valueFor(c,f)])));
+  }
+  const ws=XLSX.utils.json_to_sheet(rows,{header});
+  ws["!cols"]=header.map(h=>({wch:Math.min(40,Math.max(10,String(h).length+2,...rows.slice(0,200).map(r=>String(r[h]??"").length+1)))}));
+  if(rows.length) ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:header.length-1}})};
+  XLSX.utils.book_append_sheet(wb,ws,base?base.sheet.slice(0,31):"Contacts");
+  if(check.length){
+    const ch=[...OUT_COLS.map(x=>x[1]),"Reason","Source"];
+    const cr=check.map(c=>({...Object.fromEntries(OUT_COLS.map(([f,l])=>[l,valueFor(c,f)])),Reason:c.issues.map(i=>i.m).join("; "),Source:c.bron.map(b=>b.file).join(", ")}));
+    const w2=XLSX.utils.json_to_sheet(cr,{header:ch}); w2["!cols"]=ch.map(h=>({wch:h==="Reason"?48:18}));
+    XLSX.utils.book_append_sheet(wb,w2,"Needs review");
+  }
+  const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const d=new Date(), stamp=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const filename=base?base.name.replace(/\.(xlsx|xls|csv)$/i,"")+" (updated).xlsx":(currentList&&currentList.name?currentList.name.replace(/[\\/:*?"<>|]+/g," ").trim():`contacts ${stamp}`)+".xlsx";
+  try{
+    const blob=new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    if(downloads) await downloads.save({filename,data:blob});
+    else { // outside Claude (e.g. GitHub Pages): a normal browser download
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
+      document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+    }
+    notice(`Saved: ${good.length} contacts${base?" added to your existing list":""}${check.length?`, plus ${check.length} on the “Needs review” sheet`:""}.`,true);
+  }catch(e){
+    if(e&&e.code==="declined") return;
+    notice(e&&e.code==="rate_limited"?"A download prompt is already open. Finish that one first.":"Downloading didn't work in this view.");
+  }
+}
+
+/* ---------- rendering ---------- */
+let lastRun=null, openId=null, successOn=false, runStart=0;
+function notice(msg,info){ const n=$("notice"); n.textContent=msg; n.className="notice "+(info?"info":"warn"); n.hidden=!msg; }
+const ICON={
+  ok:'<svg class="sicon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--accent-weak)"/><path d="m5 8.2 2 2 4-4.4" stroke="var(--accent)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn:'<svg class="sicon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--warn-weak)"/><path d="M8 4.6v4.1" stroke="var(--warn)" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11.2" r=".95" fill="var(--warn)"/></svg>',
+  mute:'<svg class="sicon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--sunk)"/><path d="M5 8h6" stroke="var(--faint)" stroke-width="1.6" stroke-linecap="round"/></svg>'
+};
+const WARN_SM='<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 15 14H1z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6v3.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".8" fill="currentColor"/></svg>';
+const needsCheck=c=>c.status==="check"&&!c.exists;
+const stateOf=c=>c.exists?["mute","Already in your Excel"]:c.status==="check"?["warn","Review"]:c.status==="approved"?["ok","Approved"]:["ok","Ready"];
+function cellText(c,k,bad){
+  const v=c[k];
+  if(bad[k]) return `<button class="fixlink fieldwarn" data-fix="${k}" title="${esc(bad[k])} · click to fix">${v?esc(v):"Missing"}</button>`;
+  return v?esc(v):`<span class="empty-cell">—</span>`;
+}
+function rowHtml(c){
+  const bad={}; c.issues.forEach(i=>{ if(i.f&&["naam","bedrijf","functie","email","telefoon"].includes(i.f)) bad[i.f]=(bad[i.f]?bad[i.f]+"; ":"")+i.m; });
+  const [s,label]=stateOf(c);
+  return `<tr data-id="${c.id}" tabindex="0" class="${openId===c.id?"sel":""}"${c.issues.length?` title="${esc(c.issues.map(i=>i.m).join(" · "))}"`:""}>`+
+    `<td>${ICON[s]}</td><td>${cellText(c,"naam",bad)}${c.repeat>1?`<span class="rep">${c.repeat}×</span>`:""}</td>`+
+    `<td>${cellText(c,"bedrijf",bad)}</td><td>${cellText(c,"functie",bad)}</td><td>${cellText(c,"email",bad)}</td><td>${cellText(c,"telefoon",bad)}</td>`+
+    `<td><span class="st ${s}">${label}</span></td></tr>`;
+}
+function fmtTime(d){
+  const t=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  return (d.toDateString()===new Date().toDateString()?"today ":d.toLocaleDateString("en-GB")+" ")+t;
+}
+function render(){
+  const n=contacts.length, nCheck=contacts.filter(needsCheck).length, nEx=contacts.filter(c=>c.exists).length, nOk=n-nCheck-nEx;
+  $("ovLabel").innerHTML=`<span>Processed${lastRun?" · "+fmtTime(lastRun):""}</span>`+(isExample?`<span class="badge">Example</span>`:"");
+  $("ovBig").textContent=`${n} contact${n===1?"":"s"} found`;
+  $("counts").innerHTML=
+    `<span><span class="dot" style="background:var(--accent)"></span><b>${nOk}</b>ready</span>`+
+    `<span><span class="dot" style="background:var(--warn)"></span><b>${nCheck}</b>need review</span>`+
+    `<span><span class="dot" style="background:var(--line-strong)"></span><b>${dupes}</b>duplicate${dupes===1?"":"s"} merged</span>`+
+    (base?`<span><span class="dot" style="background:var(--faint)"></span><b>${nEx}</b>already in your Excel</span>`:"");
+  $("n-check").textContent=nCheck; $("n-all").textContent=n;
+  $("tab-check").setAttribute("aria-selected",tab==="check"); $("tab-all").setAttribute("aria-selected",tab==="all");
+  $("basenote").textContent=base?`Merging with ${base.name}`:"";
+  $("reviewBtn").disabled=!nCheck; $("reviewBtn").textContent=nCheck?`Needs review (${nCheck})`:"Needs review"; $("exportBtn").disabled=!n;
+  // success message after processing
+  const sc=$("success");
+  if(successOn&&!isExample&&n){
+    const nReady=n-nCheck-nEx, added=Math.max(0,n-runStart);
+    $("successMsg").innerHTML=`<b>${nReady} ${base?"new ":""}contact${nReady===1?"":"s"} ready for export.</b> `+
+      `<span class="sub">${nCheck?`${nCheck} still need${nCheck===1?"s":""} review.`:"Everything has been reviewed."}${added&&added!==n?` ${added} new from the last run.`:""}${base&&nEx?` ${nEx} were already on your list.`:""}</span>`;
+    $("successAct").textContent=nCheck?"Needs review":"Export to Excel";
+    $("successAct").className="btn small"+(nCheck?"":" primary");
+    sc.hidden=false;
+  } else sc.hidden=true;
+  // merging
+  $("mergeState").hidden=!base;
+  if(base) $("mergeState").innerHTML=`Selected: <b>${esc(base.name)}</b> · ${base.rows.length} existing contacts`+(isExample?"":` · <b>${contacts.filter(c=>!c.exists).length}</b> new, ${nEx} already there`);
+  $("baseBtnText").textContent=base?"Choose another list":"Choose Excel list";
+  $("baseRemove").hidden=!base;
+  if(typeof renderNav==="function") renderNav(nCheck);
+  if(typeof renderHead==="function") renderHead();
+  const list=tab==="check"?contacts.filter(needsCheck):contacts;
+  $("tbody").innerHTML=list.length?list.map(rowHtml).join(""):
+    `<tr class="emptyrow"><td colspan="7">${n?"Everything has been reviewed. You can export to Excel.":"No contacts yet. Add a document above."}</td></tr>`;
+  if(openId!=null) renderPanel();
+}
+
+/* ---------- side panel ---------- */
+const panelList=()=>tab==="check"?contacts.filter(needsCheck):contacts;
+function focusField(k){ const f=(k&&$("pf-"+k))||$("p-body").querySelector(".has-warn input")||$("p-body").querySelector("input"); if(f){ f.focus(); if(k) f.select(); } }
+function openPanel(id,field){
+  openId=id; $("panel").hidden=false; $("scrim").hidden=false; render();
+  setTimeout(()=>focusField(field),0);
+}
+function closePanel(){ const id=openId; openId=null; $("panel").hidden=true; $("scrim").hidden=true; render();
+  const tr=document.querySelector(`tr[data-id="${id}"]`); if(tr) tr.focus(); }
+function nextCheck(fromId){ const i=contacts.findIndex(x=>x.id===fromId); return contacts.slice(i+1).find(needsCheck)||contacts.find(x=>needsCheck(x)&&x.id!==fromId); }
+function renderPanel(){
+  const c=contacts.find(x=>x.id===openId); if(!c){ openId=null; $("panel").hidden=true; $("scrim").hidden=true; return; }
+  const list=panelList(), idx=list.findIndex(x=>x.id===c.id);
+  $("p-title").textContent=needsCheck(c)?"Review contact":"Contact";
+  $("p-pos").textContent=idx>=0?`${idx+1} of ${list.length}`:"";
+  $("p-prev").disabled=idx<=0; $("p-next").disabled=idx<0||idx>=list.length-1;
+  const byF={}, general=[]; c.issues.forEach(i=>{ if(i.f) (byF[i.f]=byF[i.f]||[]).push(i.m); else general.push(i.m); });
+  const [s,label]=stateOf(c);
+  const msg=m=>`<div class="msg">${WARN_SM}<span>${esc(m)}</span></div>`;
+  let h="";
+  if(needsCheck(c)){
+    h+=`<div class="issues">`+c.issues.map(i=>`<div class="it">${WARN_SM}<span>${esc(i.m)}</span>${i.f?`<button class="fixlink go" data-focus="${i.f}">Fix</button>`:""}</div>`).join("")+`</div>`;
+  } else h+=`<div class="p-summary">${label}</div>`;
+  FIELDS.forEach(([k,l])=>{ const w=byF[k];
+    h+=`<div class="fld${w?" has-warn":""}"><label for="pf-${k}">${l}</label><input id="pf-${k}" data-k="${k}" value="${esc(c[k])}" spellcheck="false" autocomplete="off">${w?w.map(msg).join(""):""}</div>`; });
+  if(c.repeat>1) h+=`<div class="p-note">This person appears ${c.repeat}× in the source with different details. Each row stays separate in the export.</div>`;
+  h+=`<div class="p-src"><h3>Found in</h3>${c.bron.map(b=>`<div class="snip"><span>${esc(b.file)}</span>${esc(b.snippet||"No excerpt")}</div>`).join("")}</div>`;
+  $("p-body").innerHTML=h;
+  $("p-foot").innerHTML=`<button class="btn quiet" data-pact="del">Delete</button>`+
+    (needsCheck(c)?`<button class="btn primary" data-pact="ok">Approve</button>`:`<button class="btn" data-pact="close">Close</button>`);
+}
+$("p-body").addEventListener("change",e=>{
+  const t=e.target; if(!t.dataset||!t.dataset.k) return;
+  const c=contacts.find(x=>x.id===openId); if(!c) return;
+  const k=t.dataset.k; c[k]=t.value; c.conflicts=c.conflicts.filter(x=>x.f!==k);
+  if(["naam","bedrijf","functie"].includes(k)) c[k]=sq(c[k]); else normalize(c);
+  if(c.status==="approved") c.status=null;
+  if(c.conf==="laag") c.conf="middel";
+  validateAll(); if(base) markExisting(); afterChange();
+  setTimeout(()=>{ const id=document.activeElement&&document.activeElement.id; render(); if(id&&$(id)) $(id).focus(); },0);
+});
+$("p-foot").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pact]"); if(!b) return;
+  const c=contacts.find(x=>x.id===openId); if(!c) return;
+  if(b.dataset.pact==="close") return closePanel();
+  if(b.dataset.pact==="ok"){
+    c.status="approved"; afterChange(); const nx=nextCheck(c.id);
+    if(nx) openPanel(nx.id); else { closePanel(); toast("Everything reviewed. You can export now.",false); }
+    return;
+  }
+  const nx=nextCheck(c.id), i=contacts.indexOf(c);
+  lastDeleted={c,i}; contacts.splice(i,1); validateAll(); afterChange();
+  toast(`${c.naam||c.bedrijf||"Contact"} deleted`,true);
+  if(nx&&tab==="check") openPanel(nx.id); else closePanel();
+});
+$("p-body").addEventListener("click",e=>{ const b=e.target.closest("[data-focus]"); if(b) focusField(b.dataset.focus); });
+$("p-close").addEventListener("click",closePanel);
+
+/* ---------- my lists (saved per user) ---------- */
+let db=null, uid=null, savedLists=null, currentList=null, saveTimer=null, saveState="", saveChain=Promise.resolve(), confirmDel=false;
+const listsCol=()=>db.collection("data/users/"+uid);
+(async()=>{
+  if(!window.claude||!window.claude.use){ savedLists=[]; renderLists(); return; }
+  const [d,u]=await Promise.all([claude.use("db"),claude.use("user")]);
+  const id=u?await u.id():null;
+  if(!d||!id){ savedLists=[]; renderLists(); render(); return; }
+  db=d; uid=id;
+  listsCol().where("kind","==","list").onSnapshot(snap=>{
+    savedLists=snap.docs.map(x=>Object.assign({id:x.id},x.data())).sort((a,b)=>String(b.updatedAt||"").localeCompare(String(a.updatedAt||"")));
+    renderLists();
+  },()=>{ db=null; savedLists=[]; renderLists(); render(); });
+  render();
+})();
+function defaultName(file){
+  const base=String(file||"").split(" › ")[0].replace(/\.[a-z0-9]{2,4}$/i,"").replace(/[_]+/g," ").trim();
+  if(base) return base.charAt(0).toUpperCase()+base.slice(1);
+  const d=new Date(); return "List "+d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+}
+function afterChange(file){
+  if(isExample||!db) return;
+  if(!currentList){
+    if(!contacts.length) return;
+    currentList={id:"L"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:defaultName(file),createdAt:new Date().toISOString(),parts:0,files:[]};
+  }
+  if(file&&!currentList.files.includes(file)) currentList.files.push(file);
+  scheduleSave();
+}
+function setSave(s){ saveState=s; renderHead(); }
+function scheduleSave(){ clearTimeout(saveTimer); setSave("Saving changes…"); saveTimer=setTimeout(()=>{ saveTimer=null; saveChain=saveChain.then(saveNow); },1000); }
+async function flushSave(){ if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; saveChain=saveChain.then(saveNow); } await saveChain; }
+function packRow(c){
+  const o={}; KEYS.forEach(k=>{ if(c[k]) o[k]=c[k]; });
+  if(c.conf==="laag"){ o.conf="laag"; o.tw=c.twijfel; }
+  if(c.status==="approved") o.ok=1;
+  o.b=c.bron.slice(0,4).map(b=>[String(b.file).slice(0,120),String(b.snippet||"").slice(0,100)]);
+  return o;
+}
+async function saveNow(){
+  if(!db||!currentList) return;
+  const L=currentList, rows=contacts.map(packRow), parts=[]; let cur=[], size=0;
+  for(const r of rows){ const n=JSON.stringify(r).length; if(size+n>180000&&cur.length){ parts.push(cur); cur=[]; size=0; } cur.push(r); size+=n; }
+  parts.push(cur);
+  const col=listsCol();
+  try{
+    for(let i=0;i<parts.length;i++) await col.doc(L.id+"_p"+i).set({kind:"part",list:L.id,i,rows:parts[i]});
+    for(let i=parts.length;i<(L.parts||0);i++) await col.doc(L.id+"_p"+i).delete();
+    await col.doc(L.id).set({kind:"list",name:L.name||"Untitled list",createdAt:L.createdAt,updatedAt:new Date().toISOString(),count:contacts.length,check:contacts.filter(needsCheck).length,parts:parts.length,dupes,files:L.files.slice(-50)});
+    L.parts=parts.length;
+    if(L===currentList) setSave("Saved");
+  }catch(e){
+    if(L===currentList) setSave(e&&e.code==="quota_exceeded"?"Saving failed: storage is full. Delete an old list.":"Saving failed. Your changes are still on this page.");
+  }
+}
+async function openList(id){
+  if(running){ notice("Wait until processing has finished."); return; }
+  if(currentList&&currentList.id===id){ go("verwerken"); return; }
+  await flushSave();
+  const meta=(savedLists||[]).find(l=>l.id===id); if(!meta) return;
+  setSave("Opening…");
+  const rows=[];
+  try{ for(let i=0;i<(meta.parts||1);i++){ const sn=await listsCol().doc(id+"_p"+i).get(); if(sn.exists) rows.push(...((sn.data()||{}).rows||[])); } }
+  catch(e){ notice("This list could not be opened. Please try again later."); setSave(""); return; }
+  if(openId!=null) closePanel();
+  contacts=rows.map(r=>{ const c={id:++seq,conf:r.conf||"hoog",twijfel:r.tw||"",bron:(r.b||[]).map(x=>({file:x[0],snippet:x[1]})),conflicts:[],status:r.ok?"approved":null}; KEYS.forEach(k=>c[k]=r[k]||""); return c; });
+  dupes=meta.dupes||0; isExample=false; confirmDel=false;
+  currentList={id,name:meta.name||"",createdAt:meta.createdAt,parts:meta.parts||1,files:(meta.files||[]).slice()};
+  validateAll(); if(base) markExisting();
+  lastRun=meta.updatedAt?new Date(meta.updatedAt):null; successOn=false; tab="all";
+  clearQueue(); notice(""); saveState="Saved"; go("verwerken");
+}
+function clearQueue(){ $("qlist").innerHTML=""; $("queue").hidden=true; queueItems.length=0; }
+async function newList(){
+  if(running){ notice("Wait until processing has finished."); return; }
+  await flushSave();
+  if(openId!=null) closePanel();
+  contacts=[]; dupes=0; isExample=false; currentList=null; lastRun=null; successOn=false; tab="all"; confirmDel=false; saveState="";
+  clearQueue(); notice(""); go("verwerken");
+}
+async function deleteList(){
+  const L=currentList; if(!L||!db) return;
+  clearTimeout(saveTimer); saveTimer=null; await saveChain;
+  try{ for(let i=0;i<Math.max(1,L.parts||0);i++) await listsCol().doc(L.id+"_p"+i).delete(); await listsCol().doc(L.id).delete(); }
+  catch(e){ notice("Deleting didn't work. Please try again."); return; }
+  const nm=L.name; await newList(); toast(`List “${nm}” deleted`,false);
+}
+function fmtDay(iso){ if(!iso) return ""; const d=new Date(iso); return d.toDateString()===new Date().toDateString()?d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}):d.toLocaleDateString("en-GB",{day:"numeric",month:"short"}); }
+function renderLists(){
+  const html = savedLists==null ? `<div class="lempty">Loading…</div>`
+    : !db ? `<div class="lempty">Saving lists only works when Overtyp is opened in Claude.</div>`
+    : !savedLists.length ? `<div class="lempty">No lists yet. Process a document and the list is saved here automatically.</div>`
+    : savedLists.map(l=>`<button class="litem" data-list="${esc(l.id)}" aria-current="${currentList&&currentList.id===l.id}"><span class="ln">${esc(l.name||"Untitled list")}</span><span class="lm">${Number(l.count)||0} contacts${l.check?` · ${l.check} to review`:""} · ${esc(fmtDay(l.updatedAt))}</span></button>`).join("");
+  $("sideLists").innerHTML=html; $("viewLists").innerHTML=html;
+  $("newListBtn").hidden=!db;
+}
+function renderHead(){
+  const inp=$("listName");
+  if(document.activeElement!==inp){
+    inp.value = currentList ? currentList.name : isExample ? "Process documents" : "New list";
+  }
+  inp.disabled=!currentList;
+  inp.title=currentList?"Click to rename":"";
+  let sub="";
+  if(currentList){
+    const err=/failed/.test(saveState), busy=/…/.test(saveState);
+    sub=`<span class="saved${err?" err":busy?" busy":""}">${esc(saveState||"Saved")}</span><span>${contacts.length} contacts</span>`+
+      (confirmDel?`<span class="confirm">Permanently delete this list and all its contacts? <button class="btn small" id="delYes">Delete</button><button class="btn small quiet" id="delNo">Cancel</button></span>`
+                 :`<button class="fixlink" id="delList">Delete list</button>`);
+  } else {
+    sub=`<span>Turn contact details from documents and emails into a clean Excel list.${db?" Your list is saved automatically under My lists.":""}</span>`;
+  }
+  $("pageSub").innerHTML=sub;
+  renderLists();
+}
+$("listName").addEventListener("change",e=>{ if(!currentList) return; currentList.name=sq(e.target.value)||"Untitled list"; e.target.value=currentList.name; scheduleSave(); });
+$("listName").addEventListener("keydown",e=>{ if(e.key==="Enter") e.target.blur(); });
+$("pageSub").addEventListener("click",e=>{
+  if(e.target.id==="delList"){ confirmDel=true; renderHead(); }
+  else if(e.target.id==="delNo"){ confirmDel=false; renderHead(); }
+  else if(e.target.id==="delYes"){ confirmDel=false; deleteList(); }
+});
+document.addEventListener("click",e=>{
+  const li=e.target.closest("[data-list]"); if(li){ openList(li.dataset.list); return; }
+  if(e.target.closest("#newListBtn,[data-newlist]")) newList();
+});
+
+/* ---------- menu ---------- */
+let curView="verwerken";
+function go(v){
+  if(v==="controle"){ curView="verwerken"; tab="check"; }
+  else { curView=v; if(v==="verwerken"&&tab==="check") tab="all"; }
+  document.querySelectorAll(".view").forEach(el=>el.hidden=el.dataset.view!==curView);
+  render();
+  if(v==="controle") $("results").scrollIntoView({block:"start",behavior:"smooth"}); else window.scrollTo(0,0);
+}
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-go]"); if(b){ e.preventDefault(); go(b.dataset.go); } });
+function renderNav(nCheck){
+  const v=curView==="verwerken"&&tab==="check"?"controle":curView;
+  document.querySelectorAll(".nav").forEach(b=>{ if(b.dataset.go===v) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  $("navCheck").textContent=nCheck; $("navCheck").hidden=!nCheck; $("navBase").hidden=!base;
+}
+/* ---------- paste text ---------- */
+function openPaste(text){
+  if(curView!=="verwerken") go("verwerken");
+  $("pastebox").hidden=false;
+  if(text!=null) $("pasteText").value=text;
+  updatePasteCount(); $("pasteText").focus();
+}
+function updatePasteCount(){ const n=$("pasteText").value.trim().length; $("pasteCount").textContent=n?`${n.toLocaleString("en-GB")} characters pasted`:""; $("pasteGo").disabled=!n; }
+$("pasteBtn").addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); openPaste(); });
+$("pasteText").addEventListener("input",updatePasteCount);
+$("pasteCancel").addEventListener("click",()=>{ $("pasteText").value=""; $("pastebox").hidden=true; });
+$("pasteGo").addEventListener("click",()=>{
+  const t=$("pasteText").value; if(!t.trim()) return;
+  const d=new Date(), hm=String(d.getHours()).padStart(2,"0")+"."+String(d.getMinutes()).padStart(2,"0");
+  processFiles([new File([t],`Pasted text ${hm}.txt`,{type:"text/plain"})]);
+  $("pasteText").value=""; $("pastebox").hidden=true;
+});
+document.addEventListener("paste",e=>{
+  const el=e.target; if(el&&(el.tagName==="INPUT"||el.tagName==="TEXTAREA")) return;
+  const cd=e.clipboardData; if(!cd) return;
+  if(cd.files&&cd.files.length){ e.preventDefault(); processFiles(cd.files); return; }
+  const t=cd.getData("text/plain")||(cd.getData("text/html")?htmlToText(cd.getData("text/html")):"");
+  if(t.trim()){ e.preventDefault(); openPaste(t); }
+});
+$("successClose").addEventListener("click",()=>{ successOn=false; render(); });
+$("successAct").addEventListener("click",()=>{ if(contacts.some(needsCheck)) $("reviewBtn").click(); else exportXlsx(); });
+$("baseRemove").addEventListener("click",()=>{ base=null; contacts.forEach(c=>c.exists=false); render(); });
+$("scrim").addEventListener("click",closePanel);
+$("p-prev").addEventListener("click",()=>{ const l=panelList(), i=l.findIndex(x=>x.id===openId); if(i>0) openPanel(l[i-1].id); });
+$("p-next").addEventListener("click",()=>{ const l=panelList(), i=l.findIndex(x=>x.id===openId); if(i>=0&&i<l.length-1) openPanel(l[i+1].id); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&openId!=null) closePanel(); });
+
+/* ---------- interaction ---------- */
+const drop=$("drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>processFiles(e.dataTransfer.files));
+$("file").addEventListener("change",e=>{processFiles(e.target.files); e.target.value="";});
+$("stop").addEventListener("click",()=>{stopReq=true; if(currentCtl) currentCtl.abort();});
+$("tab-check").addEventListener("click",()=>{tab="check";render();});
+$("tab-all").addEventListener("click",()=>{tab="all";render();});
+$("reviewBtn").addEventListener("click",()=>{ tab="check"; const f=contacts.find(needsCheck); if(f) openPanel(f.id); else render(); });
+$("exportBtn").addEventListener("click",exportXlsx);
+$("baseFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  try{ await loadBase(f); }catch(err){ notice(err.message==="kolommen"?`${f.name} has no column for name or email. Put column headings in the first row, such as “Name” and “Email”.`:`${f.name} could not be read.`); }
+});
+$("tbody").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-id]"); if(!tr) return; const fx=e.target.closest("[data-fix]"); openPanel(+tr.dataset.id, fx?fx.dataset.fix:null); });
+$("tbody").addEventListener("keydown",e=>{ if(e.key!=="Enter"&&e.key!==" ") return; const tr=e.target.closest("tr[data-id]"); if(tr){ e.preventDefault(); openPanel(+tr.dataset.id); } });
+let toastTimer;
+function toast(msg,undo){ $("toastMsg").textContent=msg; $("undo").hidden=!undo; $("toast").hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$("toast").hidden=true,6000); render(); }
+$("undo").addEventListener("click",()=>{ if(lastDeleted){ contacts.splice(lastDeleted.i,0,lastDeleted.c); lastDeleted=null; validateAll(); afterChange(); render(); } $("toast").hidden=true; });
+
+/* ---------- sample files (fictional) ---------- */
+const SAMPLE_LIST=`Netwerkbijeenkomst Logistiek Noord — deelnemerslijst
+Datum: 12 september 2026, Zwolle
+
+Naam                Organisatie                 Functie               E-mail                           Telefoon
+Sanne Wolters       Transportbedrijf Veenstra   Planner               s.wolters@veenstra-transport.example   06-41239876
+Ruben de Graaf      Koelopslag Dalfsen BV       Operationeel manager  ruben@koelopslag-dalfsen.example       0529 437 120
+Fatima El Idrissi   Haven Kampen                Projectleider         f.elidrissi@havenkampen.example        +31 38 333 4521
+Joost van der Meer  Meer Logistics              Directeur             joost@meerlogistics                    06 2290 1144
+Ilse Bakker         Bakker Verpakkingen         Inkoper               ilse.bakker@bakkerverpakking.example   038-4219907
+Thomas Hulshof      Hulshof & Zn                Eigenaar              t.hulshof@hulshof-zn.example           06-1?27 55 80
+
+Adres organisator: Stationsweg 14, 8011 CZ Zwolle`;
+const SAMPLE_MAIL=`From: Ruben de Graaf <ruben@koelopslag-dalfsen.example>
+To: Planning <planning@ons-bedrijf.example>
+Subject: Fwd: Aanmelding demo koelketen
+Date: Mon, 14 Sep 2026 09:12:00 +0200
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Hoi,
+
+Hierbij de aanmelding van mijn collega voor de demo. Ze neemt ook iemand van =
+onze klant mee.
+
+Met vriendelijke groet,
+Ruben de Graaf
+Operationeel manager | Koelopslag Dalfsen BV
+Industrieweg 3, 7721 AJ Dalfsen
+T 0529 437 120 | www.koelopslag-dalfsen.example
+
+---------- Doorgestuurd bericht ----------
+Van: Merel Kuipers <merel.kuipers@koelopslag-dalfsen.example>
+
+Ik kom graag, samen met Pieter Smit (Smit Vers, inkoop).
+Pieter is bereikbaar op 06 18 77 42 09.
+
+Merel Kuipers
+Kwaliteitscoördinator
+Koelopslag Dalfsen BV
+linkedin.com/in/merelkuipers-voorbeeld
+`;
+$("tryBtn").addEventListener("click",async()=>{ await newList(); processFiles([
+  new File([SAMPLE_LIST],"deelnemerslijst-logistiek-noord.txt",{type:"text/plain"}),
+  new File([SAMPLE_MAIL],"Fwd Aanmelding demo koelketen.eml",{type:"message/rfc822"})
+]); });
+
+/* ---------- example result on open ---------- */
+(function seed(){
+  const ex=[
+    ["prijsopgave-catering.pdf",{naam:"Anouk Verhoef",bedrijf:"Verhoef Catering",functie:"Account manager",email:"anouk@verhoefcatering.example",telefoon:"06-52418830",adres:"Molenstraat 22, 3811ER Amersfoort",website:"verhoefcatering.example",linkedin:"",conf:"hoog",snippet:"Anouk Verhoef – Accountmanager – 06-52418830"}],
+    ["prijsopgave-catering.pdf",{naam:"Daan Mulder",bedrijf:"Verhoef Catering",functie:"Head chef",email:"daan@verhoefcatering.example",telefoon:"033 461 2290",adres:"",website:"",linkedin:"",conf:"hoog",snippet:"Daan Mulder, chef-kok, daan@verhoefcatering.example"}],
+    ["ledenlijst-2026.xlsx",{naam:"Marloes de Boer",bedrijf:"De Boer Advies",functie:"Consultant",email:"m.deboer@deboeradvies",telefoon:"06 3010 4471",adres:"Kerkplein 5, 9711 AB Groningen",website:"",linkedin:"linkedin.com/in/marloes-deboer-voorbeeld",conf:"hoog",snippet:"de Boer, Marloes;De Boer Advies;m.deboer@deboeradvies"}],
+    ["ledenlijst-2026.xlsx",{naam:"Kees Jansen",bedrijf:"Jansen Installatietechniek",functie:"Owner",email:"kees@jansen-installatie.example",telefoon:"0570-612233",adres:"",website:"jansen-installatie.example",linkedin:"",conf:"hoog",snippet:"Jansen, Kees;Jansen Installatietechniek;0570-612233"}],
+    ["scan-visitekaartjes.jpg",{naam:"Lotte Hendriks",bedrijf:"Studio Hendriks",functie:"Designer",email:"lotte@studiohendriks.example",telefoon:"06-12 4",adres:"",website:"studiohendriks.example",linkedin:"",conf:"laag",twijfel:"phone number half unreadable on scan",snippet:"LOTTE HENDRIKS · ontwerper · 06-12 4.. .."}],
+    ["Re offerte vergaderruimte.eml",{naam:"Yusuf Demir",bedrijf:"Congrescentrum De Wanden",functie:"Sales",email:"y.demir@dewanden.example",telefoon:"+31 30 220 1188",adres:"Wandenlaan 1, 3511 AA Utrecht",website:"",linkedin:"",conf:"hoog",snippet:"Yusuf Demir | Sales | +31 30 220 1188"}],
+    ["Re offerte vergaderruimte.eml",{naam:"Anouk Verhoef",bedrijf:"Verhoef Catering",functie:"",email:"anouk@verhoefcatering.example",telefoon:"",adres:"",website:"",linkedin:"",conf:"hoog",snippet:"Cc: Anouk Verhoef <anouk@verhoefcatering.example>"}],
+    ["ledenlijst-2026.xlsx",{naam:"Eva Kramer",bedrijf:"Kramer & Co",functie:"Office manager",email:"eva@kramerenco.example",telefoon:"020 845 3321",adres:"Prinsengracht 300, 1016 HX Amsterdam",website:"",linkedin:"",conf:"hoog",snippet:"Kramer, Eva;Kramer & Co;020 845 3321"}]
+  ];
+  ex.forEach(([file,r])=>addContacts([r],file));
+  tab="all"; render();
+})();
+</script>
+</body>
+</html>
