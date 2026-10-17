@@ -4,7 +4,9 @@
 
 Overtyp reads the document, finds every contact person, normalises the data, flags what looks wrong, and lets an employee fix only those few cases before exporting to Excel.
 
-![Overtyp with the 52-row test file loaded: 48 contacts ready, 4 flagged for review](docs/screenshots/overview.png)
+![Demo: a PDF goes in, 52 contacts come out, the flagged ones are fixed and approved](docs/demo.gif)
+
+▶ **[Watch the 1-minute demo with explanation](docs/demo.mp4)**
 
 ---
 
@@ -15,6 +17,8 @@ In office jobs someone regularly gets a participant list, a member list or a pil
 The documents are never the same: tables, loose text, email signatures, scanned business cards. A fixed template or a few regular expressions break on the second document. That is where a language model helps.
 
 ## What it does
+
+![Overtyp with the 52-row test file loaded: 48 contacts ready, 4 flagged for review](docs/screenshots/overview.png)
 
 - **Any common input**: PDF (including scans), photos, Word, Excel/CSV, emails (`.eml`, `.msg`) and their attachments, or text pasted with Ctrl+V.
 - **Extracts a fixed set of fields**: name, company, job title, email, phone, address, website, LinkedIn, plus the source line each contact came from.
@@ -99,6 +103,7 @@ tests/fixtures/            test PDF and its ground truth
 docs/evaluation.md         test results, iterations, what is not measured yet
 docs/roadmap.md            from prototype to production
 docs/screenshots/
+docs/demo.mp4, demo.gif   demo video and the short version above
 ```
 
 ## What I would do next
