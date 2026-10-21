@@ -1,0 +1,6 @@
+[
+ {"naam":"Marieke Postma","bedrijf":"Friesland Zuivel Coop.","functie":"Marketing","email":"marieke.postma@frieslandzuivel.example","telefoon":"06 12 345 678","adres":"","website":"","linkedin":"","zekerheid":"hoog","twijfel":"","bron":"Marieke Postma, marketing, Friesland Zuivel Coop."},
+ {"naam":"Bert Kuipers","bedrijf":"Kuipers Transport","functie":"Eigenaar","email":"bert@kuiperstransport.ex ample","telefoon":"0511 45 67 89","adres":"","website":"","linkedin":"","zekerheid":"laag","twijfel":"email contains a space, possibly mistyped","bron":"bert@kuiperstransport.ex ample   tel 0511 45 67 89"},
+ {"naam":"Anouk vd Berg","bedrijf":"Wadden Hotels","functie":"HR manager","email":"a.vandenberg@waddenhotels.example","telefoon":"+31 (0)58 - 845 6600","adres":"Zeedijk 4, 9165TR Schiermonnikoog","website":"","linkedin":"","zekerheid":"middel","twijfel":"","bron":"ANOUK VD BERG / HR manager, Wadden Hotels"},
+ {"naam":"Bert Kuipers","bedrijf":"Kuipers Transport BV","functie":"","email":"bert@kuiperstransport.example","telefoon":"0511-456789","adres":"","website":"","linkedin":"","zekerheid":"hoog","twijfel":"","bron":"Kuipers Transport BV, Bert Kuipers, bert@kuiperstransport.example, 0511-456789"}
+]

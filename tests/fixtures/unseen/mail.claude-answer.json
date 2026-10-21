@@ -1,0 +1,8 @@
+[
+ {"naam":"Sylvie","bedrijf":"","functie":"","email":"sylvie@ons-bedrijf.example","telefoon":"","adres":"","website":"","linkedin":"","zekerheid":"middel","twijfel":"","bron":"To: Sylvie <sylvie@ons-bedrijf.example>"},
+ {"naam":"Daan Hoekstra","bedrijf":"Hoekstra Bouw B.V.","functie":"Projectleider","email":"d.hoekstra@hoekstra-bouw.example","telefoon":"06 - 4433 2211","adres":"Havenstraat 12, 8861 AB Harlingen","website":"www.hoekstra-bouw.example","linkedin":"","zekerheid":"hoog","twijfel":"","bron":"Daan Hoekstra / Projectleider | Hoekstra Bouw B.V."},
+ {"naam":"Petra Zwart","bedrijf":"Zwart Advies","functie":"Eigenaar","email":"petra.zwart@zwartadvies.example","telefoon":"058 212 34 5","adres":"","website":"","linkedin":"linkedin.com/in/petrazwart-example","zekerheid":"hoog","twijfel":"","bron":"Petra Zwart / Eigenaar – Zwart Advies / T 058 212 34 5"},
+ {"naam":"Jorrit Bakema","bedrijf":"Zwart Advies","functie":"Adviseur","email":"jorrit@zwartadvies.example","telefoon":"","adres":"","website":"","linkedin":"","zekerheid":"laag","twijfel":"spelling of first name uncertain (Jorrit or Jorit)","bron":"ik en Jorrit Bakema (onze nieuwe adviseur)"},
+ {"naam":"Henk van der Molen","bedrijf":"Van der Molen","functie":"Directeur","email":"","telefoon":"0517-390 220","adres":"","website":"","linkedin":"","zekerheid":"middel","twijfel":"","bron":"Henk van der Molen (directeur) ... Telefoon algemeen: 0517-390 220"},
+ {"naam":"Ilse de Wit","bedrijf":"Van der Molen","functie":"Inkoper","email":"","telefoon":"0517-390 220","adres":"","website":"","linkedin":"","zekerheid":"middel","twijfel":"","bron":"Ilse de Wit (inkoper) ... Telefoon algemeen: 0517-390 220"}
+]

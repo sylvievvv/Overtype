@@ -57,7 +57,7 @@ The employee never sees an "agent". They see: file in, Excel out, with a short c
 
 ## Evaluation
 
-The deterministic layer is tested on two files with known answers: a clean 52-row relation file with four planted errors, and a messy 20-row file full of typos, near-duplicates, company spelling variants and missing data, compared against an existing customer list.
+The deterministic layer is tested on two files with known answers, and Claude's extraction on two unseen messy documents (a forwarded email thread and retyped business cards, see [evaluation](docs/evaluation.md#test-3-unseen-messy-documents-extracted-by-claude)). The two files with known answers are a clean 52-row relation file with four planted errors, and a messy 20-row file full of typos, near-duplicates, company spelling variants and missing data, compared against an existing customer list.
 
 | Measure | Clean file (52 rows) | Messy file (20 rows + existing list) |
 | --- | --- | --- |
@@ -92,7 +92,7 @@ npm install
 npm test
 ```
 
-19 tests cover PDF text extraction, both fixtures above, suggestions, duplicate decisions, the comparison with an existing Excel list, the export layout, phone/name/address normalisation, and email (MIME) parsing including attachments.
+21 tests cover PDF text extraction, both fixtures above, suggestions, duplicate decisions, the comparison with an existing Excel list, the export layout, phone/name/address normalisation, and email (MIME) parsing including attachments.
 
 ## Tech
 

@@ -603,7 +603,8 @@ function addContacts(found,label){
     const m=contacts.find(x=>sameContact(x,c)&&!KEYS.some(k=>k!=="naam"&&x[k]&&c[k]&&!sameValue(k,x[k],c[k])));
     if(m){
       KEYS.forEach(k=>{ if(!m[k]&&c[k]) m[k]=c[k]; });
-      if(c.conf==="laag"&&m.conf!=="laag"){m.conf="laag";m.twijfel=c.twijfel;}
+      // a second, clear source confirms the details: only uncertain if every source was uncertain
+      if(m.conf==="laag"&&c.conf!=="laag"){ m.conf=c.conf; m.twijfel=""; }
       m.bron.push(...c.bron); dupes++;
     } else { contacts.push(c); added++; }
   }
@@ -732,7 +733,7 @@ Rules:
 - adres: street and number, postcode and city on one line.
 - zekerheid is "hoog" (high), "middel" (medium) or "laag" (low). Choose "laag" when text is hard to read or cut off, when it is unclear which detail belongs to which person, or when you had to guess. Then put in "twijfel" why, in at most 8 English words.
 - bron: the line from the source where this person appears, verbatim, at most 120 characters.
-- In emails: include senders, recipients with a name and people in signatures. Skip system addresses such as noreply.
+- In emails: include senders, people named in the text and people in signatures. Do not include the people the email is addressed to (To:) unless they also appear with details of their own in the text or a signature: they are usually the user and their colleagues. Skip system addresses such as noreply.
 - No contact persons found: reply [].`+(body?`\n\nSOURCE:\n"""\n${body}\n"""`:"");
 }
 async function askClaude(label,kind,unit){

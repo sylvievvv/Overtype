@@ -87,6 +87,23 @@ The pipeline has an AI step (extraction) and a deterministic part (everything af
 **6. The comparison was hidden.** In the first version of the duplicate panel, the side-by-side comparison collapsed to a thin line, and the panel scrolled straight to the first input. Found while checking screenshots.
 *Fix:* the panel opens at the top when there is a comparison, and suggestions are also shown directly under the field.
 
+## Test 3: unseen messy documents, extracted by Claude
+
+Two new documents, not used while building: a forwarded email thread (a reply on top of two forwarded messages, a noreply sender, a CC to a generic *inkoop@* address, signatures, one person whose first name the sender wasn't sure about) and business cards retyped by an intern (capitals, an abbreviated name, a space inside an email address, the same person on two cards). The app's exact extraction prompt was answered by Claude and the answer run through the app. Documents and answers: [`tests/fixtures/unseen/`](../tests/fixtures/unseen/).
+
+| Finding | Result |
+| --- | --- |
+| Contacts found | 9: Daan, Petra, Jorrit, Henk, Ilse from the email; Marieke, Bert, Anouk from the cards (+1, see below) |
+| Correctly flagged | Petra's phone number with a digit missing, Jorrit's uncertain spelling, Henk and Ilse without an email |
+| Merged | Bert's two cards; the space was removed from his email |
+| City from address | Harlingen, Schiermonnikoog |
+
+**7. The user's own address became a contact.** The email's recipient, *Sylvie* at the user's own company, was extracted as a contact.
+*Fix:* the prompt now tells the model not to include the people an email is addressed to, unless they appear with details of their own in the text or a signature.
+
+**8. A confirmed contact stayed "uncertain".** Bert's first card was marked uncertain (space in the email), but the second card confirmed the same details, and the merged contact still asked for review.
+*Fix:* a merged contact is uncertain only if every source was uncertain.
+
 ## Not measured yet
 
 Being explicit about what these numbers do **not** show:

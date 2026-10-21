@@ -184,6 +184,20 @@ test("exact duplicates from two sources are merged and the missing fields filled
   assert.equal(run("contacts[0].bron.length"), 2);
 });
 
+test("a second, clear source removes the doubt from an uncertain one", () => {
+  const { w, run } = loadApp();
+  w.__a = [{ naam: "Bert Kuipers", bedrijf: "Kuipers Transport", email: "bert@kuiperstransport.ex ample", telefoon: "0511 45 67 89", conf: "laag", twijfel: "email contains a space" }];
+  w.__b = [{ naam: "Bert Kuipers", bedrijf: "Kuipers Transport BV", email: "bert@kuiperstransport.example", telefoon: "0511-456789", conf: "hoog" }];
+  run("addContacts(__a,'card1.txt'); addContacts(__b,'card2.txt')");
+  assert.equal(run("contacts.length"), 1);
+  assert.equal(run("contacts[0].status"), "ok");
+});
+
+test("the extraction prompt skips the people an email is addressed to", () => {
+  const { run } = loadApp();
+  assert.match(run(`prompt('x.eml','email','body')`), /Do not include the people the email is addressed to \(To:\)/);
+});
+
 test("same email address with a different name is never merged silently", () => {
   const { w, run } = loadApp();
   w.__rows = [
