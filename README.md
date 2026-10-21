@@ -22,14 +22,20 @@ The documents are never the same: tables, loose text, email signatures, scanned 
 
 - **Any common input**: PDF (including scans), photos, Word, Excel/CSV, emails (`.eml`, `.msg`) and their attachments, or text pasted with Ctrl+V.
 - **Extracts a fixed set of fields**: name, company, job title, email, phone, address, website, LinkedIn, plus the source line each contact came from.
-- **Normalises**: phone numbers to `+31 6 12345678`, Dutch postcodes to `1234 AB`, names split into first name / prefix / last name in the export.
+- **Normalises**: phone numbers to `+31 6 12345678`, Dutch postcodes to `1234 AB`, names split into first name / prefix / last name, addresses split into street / postcode / city.
 - **Flags what needs a human**, each with a reason: invalid or missing email, an email that doesn't match the person's name, a company that doesn't match the email domain, two different people sharing one email address, unrecognised phone numbers, text the model marked as hard to read.
-- **Merges real duplicates** across files, but never silently merges records that contradict each other.
+- **Suggests the fix** where it can see what was meant: `.con` → `.com`, `gmial` → `gmail`, a comma instead of a dot, a missing `.nl`, or the email address and company the same person uses elsewhere in the file. One click on *Use suggestion*.
+- **Possible duplicates side by side**: the same name with a different email, or two very similar names at the same company (*Jan Jansen* / *Jan Janssen*). The employee chooses *Merge into one*, *Keep both* or *Delete this one*. Exact duplicates are merged automatically; records that contradict each other are never merged silently.
+- **Compares with an existing Excel list** in three groups: 🟢 new, 🔵 already in your Excel, 🟠 possible duplicates (*Add as new contact* or *Skip*).
 - **Review in one click**: click an underlined value and the side panel opens with that field selected. *Approve* jumps to the next case.
-- **Exports to Excel**: a clean *Contacts* sheet plus a *Needs review* sheet for anything not yet checked. It can also append only the new contacts to an existing Excel list, in that list's own columns.
+- **Exports to Excel**: a clean *Contacts* sheet plus a *Needs review* sheet for anything not yet checked, or only the new contacts appended to your existing list in its own columns. Afterwards a summary: how many were added, skipped and reviewed.
 - **My lists**: every run is saved privately per user and can be reopened later to add more names.
 
-![Review panel: the flagged field is selected so the employee can type the fix straight away](docs/screenshots/review.png)
+| Possible duplicate: you decide | A suggestion for a misspelled domain |
+| --- | --- |
+| ![Two similar names at the same company shown side by side with Merge, Keep both and Delete](docs/screenshots/duplicate.png) | ![The panel suggests noordlandservices.nl for a .con typo](docs/screenshots/suggestion.png) |
+| **Already in your Excel?** | **After export** |
+| ![A new contact compared with a similar row from the existing Excel list](docs/screenshots/existing-duplicate.png) | ![Summary after export: 11 new contacts added, 4 skipped, 3 possible duplicates reviewed](docs/screenshots/export-done.png) |
 
 ## How it works
 
@@ -38,8 +44,8 @@ flowchart TD
     A[PDF] & B[Scan / photo] & C[Word] & D[Excel / CSV] & E[Email + attachments] & P[Pasted text] --> N
     N["1 · Normalise<br/>each format → text per page,<br/>or a page image for scans"] --> X
     X["2 · Extract (Claude)<br/>fixed JSON schema per contact,<br/>with source line and confidence"] --> V
-    V["3 · Validate (code)<br/>email, phone, postcode, name↔email,<br/>company↔domain, shared emails"] --> M
-    M["4 · Merge duplicates (code)<br/>only when nothing conflicts"] --> R
+    V["3 · Validate + suggest (code)<br/>email, phone, typos, name↔email,<br/>company↔domain, shared emails"] --> M
+    M["4 · Duplicates (code)<br/>merge exact ones, flag possible ones,<br/>compare with an existing Excel list"] --> R
     R["5 · Human review<br/>only the flagged contacts"] --> O
     O["6 · Excel export<br/>new file, or appended to an existing list"]
     E -. attachments go back to step 1 .-> N
@@ -51,14 +57,16 @@ The employee never sees an "agent". They see: file in, Excel out, with a short c
 
 ## Evaluation
 
-The deterministic layer is tested against a 52-row test file ([`tests/fixtures/sample-contacts.pdf`](tests/fixtures/sample-contacts.pdf)) that contains four deliberate errors.
+The deterministic layer is tested on two files with known answers: a clean 52-row relation file with four planted errors, and a messy 20-row file full of typos, near-duplicates, company spelling variants and missing data, compared against an existing customer list.
 
-| Measure | Result |
-| --- | --- |
-| Rows read from the PDF | 52 of 52 |
-| Planted errors flagged | 4 of 4 |
-| Correct rows wrongly flagged | 0 |
-| Rows wrongly merged | 0 |
+| Measure | Clean file (52 rows) | Messy file (20 rows + existing list) |
+| --- | --- | --- |
+| Rows read from the PDF | 52 / 52 | 20 / 20 |
+| Problems flagged | 4 / 4 planted errors | 7 / 7 (typos, near-duplicate pair, missing data, bad phone) |
+| Correct rows wrongly flagged | 0 | 0 (missing phone with an email and *A.B.C. Solutions* are accepted) |
+| Right fix suggested | 3 / 3 | 3 / 3 (`.con`, `gmial`, comma) |
+| Exact duplicates merged | 0 needed, 0 wrongly | 1 / 1 |
+| Existing customers recognised | — | 3 already in Excel, 2 possible duplicates, 14 new |
 
 The first version flagged **22 of 22** merged contacts, because it treated every person who appears more than once as a duplicate. That would have made the review step useless. [`docs/evaluation.md`](docs/evaluation.md) describes what went wrong, how it was fixed, and what has not been measured yet: live extraction accuracy on messy documents, and the time saved.
 
@@ -84,7 +92,7 @@ npm install
 npm test
 ```
 
-Nine tests cover PDF text extraction, the fixture result above, duplicate handling, phone and name normalisation, and email (MIME) parsing, including attachments.
+19 tests cover PDF text extraction, both fixtures above, suggestions, duplicate decisions, the comparison with an existing Excel list, the export layout, phone/name/address normalisation, and email (MIME) parsing including attachments.
 
 ## Tech
 
@@ -99,7 +107,7 @@ Nine tests cover PDF text extraction, the fixture result above, duplicate handli
 ```
 index.html                 the complete app
 tests/app.test.mjs         automated tests
-tests/fixtures/            test PDF and its ground truth
+tests/fixtures/            test PDFs, an existing Excel list, and the ground truth
 docs/evaluation.md         test results, iterations, what is not measured yet
 docs/roadmap.md            from prototype to production
 docs/screenshots/

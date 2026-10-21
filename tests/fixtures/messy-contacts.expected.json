@@ -1,0 +1,50 @@
+{
+  "description": "Ground truth for messy-contacts.pdf (20 rows) and existing-list.xlsx (8 existing customers).",
+  "rows": 20,
+  "afterMerge": 19,
+  "exactDuplicatesMerged": 1,
+  "flagged": {
+    "2001": [
+      "Possible duplicate of Jan Janssen"
+    ],
+    "2002": [
+      "Possible duplicate of Jan Jansen"
+    ],
+    "2003": [
+      "Email domain looks misspelled"
+    ],
+    "2004": [
+      "Email domain looks misspelled"
+    ],
+    "2006": [
+      "No email and no phone"
+    ],
+    "2010": [
+      "Phone number not recognised"
+    ],
+    "2016": [
+      "Email address incomplete or invalid"
+    ]
+  },
+  "notFlagged": {
+    "2005": "missing phone but has email",
+    "2007": "company spelled 'A.B.C. Solutions' matches abcsolutions.nl"
+  },
+  "suggestions": {
+    "2003": "pieter.bakker@noordlandservices.nl",
+    "2004": "anna.deboer@gmail.com",
+    "2016": "jeroen.smit@brightconsulting.nl"
+  },
+  "withExistingList": {
+    "alreadyInExcel": [
+      "Nora Mulder",
+      "Bas Peters",
+      "Emma Vermeer"
+    ],
+    "possibleDuplicates": [
+      "2013",
+      "2018"
+    ],
+    "new": 14
+  }
+}

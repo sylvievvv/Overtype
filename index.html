@@ -197,6 +197,21 @@ th:last-child,td:last-child{padding-right:22px}
 .snip+.snip{margin-top:6px}
 .snip span{display:block;color:var(--muted);font-family:var(--font-body);font-size:11.5px;margin-bottom:2px}
 .p-note{font-size:12.5px;color:var(--muted)}
+.sugline{color:var(--ink);font-size:12.5px}
+.sugbox{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:6px;padding:7px 10px;border-radius:7px;background:var(--accent-weak);font-size:12.5px}
+.sugbox span{min-width:0;word-break:break-word}
+.compare{border:1px solid var(--line);border-radius:8px}
+.compare .ct{border-radius:8px 8px 0 0}
+.p-body{grid-auto-rows:max-content}
+.compare .ct{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;background:var(--warn-weak);color:var(--warn);font-size:13px}
+.compare .ct svg{flex:none;margin-top:2px}
+.compare table{width:100%;min-width:0;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+.compare th,.compare td,.compare th:first-child,.compare td:first-child,.compare th:last-child,.compare td:last-child{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:normal;word-break:break-word;max-width:none;background:none;width:auto}
+.compare tr{cursor:default}.compare tbody tr:hover td{background:none}
+.compare thead th{font-weight:500;color:var(--muted);font-size:11.5px}
+.compare tbody th,.compare tbody th:first-child{color:var(--muted);font-weight:500;width:76px}
+.compare td.diff{color:var(--warn);font-weight:500}
+.compare .cbtns{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;padding:10px 12px}
 .p-foot{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:14px 20px;border-top:1px solid var(--line)}
 
 .success{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;background:var(--accent-weak);border:1px solid #CFE3D8;flex-wrap:wrap}
@@ -314,7 +329,7 @@ footer.wrap{padding-block:4px 32px}
     </div>
     <div class="tablewrap">
       <table>
-        <thead><tr><th><span hidden>Status</span></th><th>Name</th><th>Company</th><th>Job title</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead>
+        <thead><tr><th><span hidden>Status</span></th><th>Name</th><th>Company</th><th>Job title</th><th>Email</th><th>Phone</th><th>City</th><th>Status</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -362,13 +377,15 @@ footer.wrap{padding-block:4px 32px}
             <li>Apple Mail: drag the email to your desktop.</li>
           </ul></div>
         <div class="hs"><h2>Reviewing</h2>
-          <p>Contacts that don't look quite right are listed under <b>Needs review</b>. Click an underlined value or the row. Fix the field and click <b>Approve</b>; you go straight to the next contact.</p></div>
+          <p>Contacts that don't look quite right are listed under <b>Needs review</b>. Click an underlined value or the row. Fix the field and click <b>Approve</b>; you go straight to the next contact.</p>
+          <p>Where Overtyp can see what was probably meant, it offers a <b>suggestion</b>, for example <i>.con</i> → <i>.com</i>, a misspelled <i>gmial</i>, or the email address the same person uses elsewhere in the file. Click <b>Use suggestion</b> to apply it.</p>
+          <p><b>Possible duplicates</b>, such as the same name with a different email address or two very similar names at the same company, are shown side by side. Choose <b>Merge into one</b>, <b>Keep both</b> or <b>Delete this one</b>. Exact duplicates are merged automatically.</p></div>
         <div class="hs"><h2>Exporting</h2>
           <p>Click <b>Export to Excel</b> and then <b>Save</b>. The file goes to your Downloads folder. Contacts that haven't been reviewed yet are on a separate "Needs review" sheet.</p></div>
         <div class="hs"><h2>My lists</h2>
           <p>Every run is saved automatically under <b>My lists</b> in the menu, named after the first file. Click the name at the top to rename it. Open a list again later to add new files or pasted text to it; duplicate contacts are merged. <b>+ New</b> starts an empty list.</p></div>
         <div class="hs"><h2>Adding to an existing list</h2>
-          <p>Choose your own file under <b>Existing Excel list</b> in the menu. When you export, you get that list back with only the new contacts added at the bottom.</p></div>
+          <p>Choose your own file under <b>Existing Excel list</b> in the menu. Overtyp sorts the contacts into three groups: <b>new</b>, <b>already in your Excel</b>, and <b>possible duplicates</b> (for example the same name with a different email address). For each possible duplicate you choose <b>Add as new contact</b> or <b>Skip</b>. When you export, you get your list back with only the new contacts added at the bottom.</p></div>
       </section>
     </div>
 
@@ -459,6 +476,7 @@ function validate(c){
   if(!c.naam) iss.push({f:"naam",m:c.bedrijf?"No contact person, only a company":"Name missing"});
   else if(/@|\d{3,}/.test(c.naam)) iss.push({f:"naam",m:"Name doesn't look like a name"});
   if(c.email&&!/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(c.email)) iss.push({f:"email",m:"Email address incomplete or invalid"});
+  else if(c.email&&emailTypo(c.email)) iss.push({f:"email",m:"Email domain looks misspelled"});
   if(c.telefoon&&!normPhone(c.telefoon)) iss.push({f:"telefoon",m:"Phone number not recognised"});
   if(c.website&&!/^https?:\/\/[^\s/]+\.[a-z]{2,}/i.test(c.website)) iss.push({f:"website",m:"Website looks invalid"});
   if(c.linkedin&&!/linkedin\.com\/(in|company)\/[^\s]+/i.test(c.linkedin)) iss.push({f:"linkedin",m:"Not a valid LinkedIn link"});
@@ -483,12 +501,47 @@ function nameEmailMismatch(c){
   return !parts.some(p=>lc.includes(p))&&!(sur&&lc.includes(sur));
 }
 function companyDomainMismatch(c){
-  const dom=c.email.split("@")[1]||"";
+  const dom=fixDomain(c.email.split("@")[1]||"");
   if(!dom.includes(".")||FREEMAIL.test(dom)) return false;
   const label=dom.split(".").slice(0,-1).join("").replace(/[^a-z0-9]/g,"");
   const words=normCo(c.bedrijf).split(" ").map(w=>w.replace(/[^a-z0-9]/g,"")).filter(w=>w.length>=3&&!["groep","group","holding","the","van","den","der","en","and"].includes(w));
   if(!words.length) return false;
   return !words.some(w=>label.includes(w));
+}
+// ---------- suggestions and similarity
+const DOMAIN_TYPO={gmial:"gmail",gmai:"gmail",gamil:"gmail",gmal:"gmail",gnail:"gmail",gmaill:"gmail",hotmial:"hotmail",hotmal:"hotmail",hotmai:"hotmail",hotmil:"hotmail",hotmaill:"hotmail",outlok:"outlook",outloook:"outlook",outllok:"outlook",yaho:"yahoo",yahooo:"yahoo",icoud:"icloud",iclod:"icloud"};
+const TLD_TYPO={con:"com",cmo:"com",cpm:"com",vom:"com",xom:"com",comm:"com",om:"com",nll:"nl",ln:"nl",nk:"nl"};
+function fixDomain(dom){ const p=String(dom).toLowerCase().split("."); if(p.length<2) return p[0]; const tld=p.pop(), label=p.join("."); return (DOMAIN_TYPO[label]||label)+"."+(TLD_TYPO[tld]||tld); }
+function emailTypo(e){ const dom=(e.split("@")[1]||"").toLowerCase(); return dom.includes(".")&&fixDomain(dom)!==dom; }
+function lev(a,b){ if(a===b) return 0; const m=a.length,n=b.length; if(Math.abs(m-n)>2) return 3; let prev=Array.from({length:n+1},(_,j)=>j); for(let i=1;i<=m;i++){ const cur=[i]; for(let j=1;j<=n;j++) cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); prev=cur; } return prev[n]; }
+function similarNames(a,b){ const x=normName(a), y=normName(b); if(!x||!y||x===y||x.length<6||y.length<6||x[0]!==y[0]) return false; return lev(x,y)<=2; }
+const digits=s=>String(s||"").replace(/\D/g,"").slice(-9);
+const personKey=c=>normName(c.naam)+"|"+c.email+"|"+digits(c.telefoon);
+const sameCoOrEmpty=(a,b)=>!normCo(a.bedrijf)||!normCo(b.bedrijf)||normCo(a.bedrijf)===normCo(b.bedrijf);
+const validEmail=e=>/^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(e||"")&&!emailTypo(e);
+function suggestFor(c,k){
+  if(k==="email"){
+    const same=contacts.filter(o=>o!==c&&normName(o.naam)&&normName(o.naam)===normName(c.naam)&&sameCoOrEmpty(o,c)&&validEmail(o.email)&&!nameEmailMismatch(o));
+    if((!c.email||nameEmailMismatch(c))&&same.length) return same[0].email;
+    if(!c.email) return null;
+    const e=c.email.replace(/\s/g,"").replace(/\(at\)|\[at\]/gi,"@").replace(/,/g,".").replace(/\.{2,}/g,".").replace(/\.$/,"");
+    const at=e.split("@"); if(at.length!==2||!at[0]||!at[1]) return null;
+    const local=at[0], dom=at[1].toLowerCase(), parts=dom.split("."), hasTld=parts.length>1;
+    const label=hasTld?parts.slice(0,-1).join("."):dom, lab=DOMAIN_TYPO[label]||label;
+    const known={};
+    contacts.forEach(o=>{ if(o!==c&&validEmail(o.email)){ const d=o.email.split("@")[1], l=d.split(".").slice(0,-1).join("."); known[l]=known[l]||{}; known[l][d]=(known[l][d]||0)+1; } });
+    let full;
+    if(known[lab]) full=Object.entries(known[lab]).sort((a,b)=>b[1]-a[1])[0][0];
+    else if(hasTld) full=fixDomain(dom);
+    else full=lab+"."+(/^(gmail|hotmail|outlook|yahoo|icloud)$/.test(lab)?"com":"nl");
+    const out=local+"@"+full;
+    return out!==c.email&&validEmail(out)?out:null;
+  }
+  if(k==="bedrijf"){
+    const o=contacts.find(o=>o!==c&&o.email&&o.email===c.email&&o.bedrijf&&normCo(o.bedrijf)!==normCo(c.bedrijf)&&!companyDomainMismatch(o));
+    return o?o.bedrijf:null;
+  }
+  return null;
 }
 function validateAll(){
   contacts.forEach(validate);
@@ -503,10 +556,28 @@ function validateAll(){
       c.issues.push({f:"email",m:"Same email address as "+others.join(", ")});
       if(c.status!=="approved") c.status="check"; });
   });
+  // possible duplicates within the list: shown side by side, the user decides
+  const flagDup=(c,o)=>{ const m=`Possible duplicate of ${o.naam||o.bedrijf||"another contact"}`; if(c.issues.some(i=>i.kind==="dup"&&(i.other===o.id||i.m===m))) return; c.issues.push({f:null,kind:"dup",other:o.id,m}); if(c.status!=="approved") c.status="check"; };
+  for(let i=0;i<contacts.length;i++) for(let j=i+1;j<contacts.length;j++){
+    const a=contacts[i], b=contacts[j];
+    if((a.keepWith||[]).includes(personKey(b))||(b.keepWith||[]).includes(personKey(a))) continue;
+    const na=normName(a.naam), nb=normName(b.naam);
+    if(na&&na===nb&&sameCoOrEmpty(a,b)){
+      if(a.email&&b.email&&a.email!==b.email){
+        const ma=nameEmailMismatch(a), mb=nameEmailMismatch(b);
+        if(ma&&!mb) flagDup(a,b); else if(mb&&!ma) flagDup(b,a); else { flagDup(a,b); flagDup(b,a); }
+      } else if(!a.email!==!b.email){ if(!a.email) flagDup(a,b); else flagDup(b,a); }
+    } else if(similarNames(a.naam,b.naam)&&((normCo(a.bedrijf)&&normCo(a.bedrijf)===normCo(b.bedrijf))||(digits(a.telefoon)&&digits(a.telefoon)===digits(b.telefoon)))){
+      flagDup(a,b); flagDup(b,a);
+    }
+  }
   // same person several times with different details: note only
   const byPerson={};
   contacts.forEach(c=>{ c.repeat=0; const k=normName(c.naam)+"|"+(c.email||normCo(c.bedrijf)); if(normName(c.naam)) (byPerson[k]=byPerson[k]||[]).push(c); });
   Object.values(byPerson).forEach(g=>{ if(g.length>1) g.forEach(c=>c.repeat=g.length); });
+  // suggestions for the first issue per field
+  contacts.forEach(c=>{ const seen=new Set(); c.issues.forEach(i=>{ if(["email","bedrijf"].includes(i.f)&&!seen.has(i.f)){ seen.add(i.f); const sg=suggestFor(c,i.f); if(sg) i.sug=sg; } }); });
+  if(base) markExisting(); else contacts.forEach(c=>{ c.exists=false; c.baseMatch=null; });
 }
 function sameContact(a,b){
   if(a.email&&b.email){
@@ -751,7 +822,7 @@ async function processFiles(files){
 }
 
 /* ---------- existing Excel ---------- */
-const HEADER_RULES=[["linkedin",/linked\s*in/i],["email",/e-?mail|mailadres/i],["telefoon",/tel|phone|mobiel|gsm|nummer/i],["website",/website|^url$|^site$|webadres/i],["adres",/adres|address|straat/i],["functie",/functie|title|^rol$|job|positie/i],["bedrijf",/bedrijf|organisatie|company|firma|klant/i],["voornaam",/voornaam|first/i],["tussenvoegsel",/tussen/i],["achternaam",/achternaam|last|surname/i],["naam",/naam|name|contact/i]];
+const HEADER_RULES=[["linkedin",/linked\s*in/i],["email",/e-?mail|mailadres/i],["telefoon",/tel|phone|mobiel|gsm|nummer/i],["website",/website|^url$|^site$|webadres/i],["postcode",/post\s*code|zip/i],["plaats",/plaats|city|stad|town/i],["adres",/adres|address|straat|street/i],["functie",/functie|title|^rol$|job|positie/i],["bedrijf",/bedrijf|organisatie|company|firma|klant/i],["voornaam",/voornaam|first/i],["tussenvoegsel",/tussen/i],["achternaam",/achternaam|last|surname/i],["naam",/naam|name|contact/i]];
 const fieldFor=h=>{const r=HEADER_RULES.find(([,re])=>re.test(String(h))); return r?r[0]:null;};
 const TV=["van","de","der","den","het","ter","ten","te","in","'t","op","von","du","la","le","da","dos","del"];
 function splitName(n){
@@ -770,32 +841,56 @@ async function loadBase(file){
   const map={}; headers.forEach(h=>{const f=fieldFor(h); if(f&&!Object.values(map).includes(f)) map[h]=f;});
   if(!Object.values(map).some(f=>["email","naam","voornaam","achternaam"].includes(f))) throw new Error("kolommen");
   base={name:file.name,sheet,headers,rows,map};
-  markExisting(); render();
+  validateAll(); render();
   notice("");
 }
-function baseKeySets(){
-  const emails=new Set(), names=new Set(); const inv={}; Object.entries(base.map).forEach(([h,f])=>inv[f]=h);
-  base.rows.forEach(r=>{
-    if(inv.email&&r[inv.email]) emails.add(String(r[inv.email]).trim().toLowerCase());
-    const nm=inv.naam?r[inv.naam]:[r[inv.voornaam]||"",r[inv.tussenvoegsel]||"",r[inv.achternaam]||""].join(" ");
-    if(sq(nm)) names.add(normName(nm));
+function baseRows(){
+  const inv={}; Object.entries(base.map).forEach(([h,f])=>{ if(!(f in inv)) inv[f]=h; });
+  const get=(r,f)=>inv[f]?String(r[inv[f]]??"").trim():"";
+  return base.rows.map(r=>{
+    const naam=sq(inv.naam?get(r,"naam"):[get(r,"voornaam"),get(r,"tussenvoegsel"),get(r,"achternaam")].join(" "));
+    return {naam,nn:normName(naam),email:get(r,"email").toLowerCase(),telefoon:get(r,"telefoon"),tel:digits(get(r,"telefoon")),bedrijf:get(r,"bedrijf"),plaats:get(r,"plaats")||splitAddr(get(r,"adres")).plaats};
   });
-  return {emails,names};
 }
+// new / already in your Excel / possible duplicate
 function markExisting(){
-  const {emails,names}=baseKeySets();
-  contacts.forEach(c=>c.exists=(c.email&&emails.has(c.email))||(!!c.naam&&names.has(normName(c.naam))));
+  const rows=baseRows();
+  contacts.forEach(c=>{
+    c.issues=c.issues.filter(i=>i.kind!=="basedup"); c.exists=false; c.baseMatch=null;
+    if(c.baseDecision==="skip"){ c.exists=true; return; }
+    const nn=normName(c.naam), tel=digits(c.telefoon); let exact=null, poss=null;
+    for(const r of rows){
+      const sameName=!!nn&&nn===r.nn;
+      if(c.email&&r.email&&c.email===r.email){ if(!nn||!r.nn||sameName){ exact=r; break; } poss=poss||r; continue; }
+      if(sameName){ if(!c.email&&!r.email){ exact=r; break; } poss=poss||r; continue; }
+      if(!poss&&nn&&similarNames(c.naam,r.naam)&&((normCo(c.bedrijf)&&normCo(c.bedrijf)===normCo(r.bedrijf))||(tel&&tel===r.tel))) poss=r;
+      if(!poss&&tel&&tel===r.tel) poss=r;
+    }
+    if(exact){ c.exists=true; return; }
+    if(poss&&c.baseDecision!=="add"&&c.status!=="approved"){
+      c.baseMatch=poss;
+      c.issues.push({f:null,kind:"basedup",m:`Possibly already in your Excel: ${[poss.naam,poss.email].filter(Boolean).join(", ")}`});
+      c.status="check";
+    }
+  });
 }
 
 /* ---------- export ---------- */
+function splitAddr(a){
+  a=sq(a); if(!a) return {straat:"",postcode:"",plaats:""};
+  const m=a.match(/^(.*?)[,\s]*\b(\d{4}\s?[A-Za-z]{2})\b[,\s]*(.*)$/);
+  if(m) return {straat:m[1].replace(/[,\s]+$/,""),postcode:m[2].replace(/\s/,"").replace(/^(\d{4})/,"$1 ").toUpperCase(),plaats:m[3]};
+  if(a.includes(",")){ const p=a.split(",").map(sq); const last=p.pop(); return /\d/.test(last)?{straat:a,postcode:"",plaats:""}:{straat:p.join(", "),postcode:"",plaats:last}; }
+  return /\d/.test(a)?{straat:a,postcode:"",plaats:""}:{straat:"",postcode:"",plaats:a};
+}
 function valueFor(c,f){
   const [v,t,a]=splitName(c.naam);
-  return {voornaam:v,tussenvoegsel:t,achternaam:a}[f]??c[f]??"";
+  if(f==="voornaam") return v; if(f==="tussenvoegsel") return t; if(f==="achternaam") return a;
+  if(f==="straat"||f==="postcode"||f==="plaats") return splitAddr(c.adres)[f];
+  return c[f]??"";
 }
-const OUT_COLS=[["voornaam","First name"],["tussenvoegsel","Name prefix"],["achternaam","Last name"],["bedrijf","Company"],["functie","Job title"],["email","Email"],["telefoon","Phone"],["adres","Address"],["website","Website"],["linkedin","LinkedIn"]];
-async function exportXlsx(){
-  if(!contacts.length){ notice("There are no contacts to export yet."); return; }
-  await ready;
+const OUT_COLS=[["voornaam","First name"],["tussenvoegsel","Name prefix"],["achternaam","Last name"],["bedrijf","Company"],["functie","Job title"],["email","Email"],["telefoon","Phone"],["straat","Street address"],["postcode","Postcode"],["plaats","City"],["website","Website"],["linkedin","LinkedIn"]];
+function buildExport(){
   const fresh=contacts.filter(c=>!c.exists);
   const good=fresh.filter(c=>c.status!=="check"), check=fresh.filter(c=>c.status==="check");
   const wb=XLSX.utils.book_new();
@@ -804,14 +899,17 @@ async function exportXlsx(){
     header=[...base.headers];
     const map={...base.map}, used=new Set(Object.values(map));
     const nameCovered=used.has("naam")||used.has("voornaam")||used.has("achternaam");
-    OUT_COLS.forEach(([f,l])=>{
-      if(["voornaam","tussenvoegsel","achternaam"].includes(f)){ if(nameCovered) return; }
-      else if(used.has(f)) return;
-      let col=l; while(header.includes(col)) col+=" (new)";
-      header.push(col); map[col]=f;
-    });
+    const covered=f=>{
+      if(["voornaam","tussenvoegsel","achternaam"].includes(f)) return nameCovered;
+      if(f==="straat") return used.has("adres");
+      if(f==="postcode") return used.has("postcode")||used.has("adres");
+      if(f==="plaats") return used.has("plaats")||used.has("adres");
+      return used.has(f);
+    };
+    OUT_COLS.forEach(([f,l])=>{ if(covered(f)||!good.some(c=>valueFor(c,f))) return; let col=l; while(header.includes(col)) col+=" (new)"; header.push(col); map[col]=f; });
     const val=(c,f)=>{
       if(f==="achternaam"&&!used.has("tussenvoegsel")&&nameCovered){ const [,t,a]=splitName(c.naam); return sq(t+" "+a); }
+      if(f==="adres"&&used.has("plaats")){ const sa=splitAddr(c.adres); return sq(sa.straat+(used.has("postcode")?"":" "+sa.postcode)); }
       return valueFor(c,f);
     };
     rows=base.rows.map(r=>({...r}));
@@ -830,9 +928,15 @@ async function exportXlsx(){
     const w2=XLSX.utils.json_to_sheet(cr,{header:ch}); w2["!cols"]=ch.map(h=>({wch:h==="Reason"?48:18}));
     XLSX.utils.book_append_sheet(wb,w2,"Needs review");
   }
-  const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
   const d=new Date(), stamp=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   const filename=base?base.name.replace(/\.(xlsx|xls|csv)$/i,"")+" (updated).xlsx":(currentList&&currentList.name?currentList.name.replace(/[\\/:*?"<>|]+/g," ").trim():`contacts ${stamp}`)+".xlsx";
+  return {wb,good,check,filename};
+}
+async function exportXlsx(){
+  if(!contacts.length){ notice("There are no contacts to export yet."); return; }
+  await ready;
+  const {wb,good,check,filename}=buildExport();
+  const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
   try{
     const blob=new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     if(downloads) await downloads.save({filename,data:blob});
@@ -840,7 +944,8 @@ async function exportXlsx(){
       const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename;
       document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
     }
-    notice(`Saved: ${good.length} contacts${base?" added to your existing list":""}${check.length?`, plus ${check.length} on the “Needs review” sheet`:""}.`,true);
+    exportResult={file:filename,added:good.length,skipped:contacts.filter(c=>c.exists).length,reviewed,left:check.length,base:!!base};
+    successOn=true; notice(""); render();
   }catch(e){
     if(e&&e.code==="declined") return;
     notice(e&&e.code==="rate_limited"?"A download prompt is already open. Finish that one first.":"Downloading didn't work in this view.");
@@ -848,7 +953,7 @@ async function exportXlsx(){
 }
 
 /* ---------- rendering ---------- */
-let lastRun=null, openId=null, successOn=false, runStart=0;
+let lastRun=null, openId=null, successOn=false, runStart=0, exportResult=null, reviewed=0;
 function notice(msg,info){ const n=$("notice"); n.textContent=msg; n.className="notice "+(info?"info":"warn"); n.hidden=!msg; }
 const ICON={
   ok:'<svg class="sicon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="var(--accent-weak)"/><path d="m5 8.2 2 2 4-4.4" stroke="var(--accent)" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -869,6 +974,7 @@ function rowHtml(c){
   return `<tr data-id="${c.id}" tabindex="0" class="${openId===c.id?"sel":""}"${c.issues.length?` title="${esc(c.issues.map(i=>i.m).join(" · "))}"`:""}>`+
     `<td>${ICON[s]}</td><td>${cellText(c,"naam",bad)}${c.repeat>1?`<span class="rep">${c.repeat}×</span>`:""}</td>`+
     `<td>${cellText(c,"bedrijf",bad)}</td><td>${cellText(c,"functie",bad)}</td><td>${cellText(c,"email",bad)}</td><td>${cellText(c,"telefoon",bad)}</td>`+
+    `<td>${(p=>p?esc(p):'<span class="empty-cell">—</span>')(splitAddr(c.adres).plaats)}</td>`+
     `<td><span class="st ${s}">${label}</span></td></tr>`;
 }
 function fmtTime(d){
@@ -879,18 +985,28 @@ function render(){
   const n=contacts.length, nCheck=contacts.filter(needsCheck).length, nEx=contacts.filter(c=>c.exists).length, nOk=n-nCheck-nEx;
   $("ovLabel").innerHTML=`<span>Processed${lastRun?" · "+fmtTime(lastRun):""}</span>`+(isExample?`<span class="badge">Example</span>`:"");
   $("ovBig").textContent=`${n} contact${n===1?"":"s"} found`;
-  $("counts").innerHTML=
+  const nPoss=contacts.filter(c=>c.baseMatch&&needsCheck(c)).length;
+  $("counts").innerHTML= base ?
+    `<span><span class="dot" style="background:var(--accent)"></span><b>${n-nEx-nPoss}</b>new</span>`+
+    `<span><span class="dot" style="background:#3B6FB6"></span><b>${nEx}</b>already in your Excel</span>`+
+    `<span><span class="dot" style="background:var(--warn)"></span><b>${nPoss}</b>possible duplicate${nPoss===1?"":"s"}</span>`+
+    `<span><span class="dot" style="background:var(--line-strong)"></span><b>${nCheck}</b>need review in total</span>` :
     `<span><span class="dot" style="background:var(--accent)"></span><b>${nOk}</b>ready</span>`+
     `<span><span class="dot" style="background:var(--warn)"></span><b>${nCheck}</b>need review</span>`+
-    `<span><span class="dot" style="background:var(--line-strong)"></span><b>${dupes}</b>duplicate${dupes===1?"":"s"} merged</span>`+
-    (base?`<span><span class="dot" style="background:var(--faint)"></span><b>${nEx}</b>already in your Excel</span>`:"");
+    `<span><span class="dot" style="background:var(--line-strong)"></span><b>${dupes}</b>duplicate${dupes===1?"":"s"} merged</span>`;
   $("n-check").textContent=nCheck; $("n-all").textContent=n;
   $("tab-check").setAttribute("aria-selected",tab==="check"); $("tab-all").setAttribute("aria-selected",tab==="all");
   $("basenote").textContent=base?`Merging with ${base.name}`:"";
   $("reviewBtn").disabled=!nCheck; $("reviewBtn").textContent=nCheck?`Needs review (${nCheck})`:"Needs review"; $("exportBtn").disabled=!n;
   // success message after processing
   const sc=$("success");
-  if(successOn&&!isExample&&n){
+  if(exportResult&&n){
+    const r=exportResult;
+    $("successMsg").innerHTML = r.base
+      ? `<b>Done. ${r.added} new contact${r.added===1?"":"s"} added</b> to ${esc(r.file)}. <span class="sub">${r.skipped} already in your Excel skipped${r.reviewed?` · ${r.reviewed} possible duplicate${r.reviewed===1?"":"s"} reviewed`:""}${r.left?` · ${r.left} on the “Needs review” sheet`:""}.</span>`
+      : `<b>Done. ${r.added} contact${r.added===1?"":"s"} exported</b> to ${esc(r.file)}. <span class="sub">${r.reviewed?`${r.reviewed} possible duplicate${r.reviewed===1?"":"s"} reviewed. `:""}${r.left?`${r.left} more on the “Needs review” sheet.`:"Nothing left to review."}</span>`;
+    $("successAct").textContent="Download again"; $("successAct").className="btn small"; sc.hidden=false;
+  } else if(successOn&&!isExample&&n){
     const nReady=n-nCheck-nEx, added=Math.max(0,n-runStart);
     $("successMsg").innerHTML=`<b>${nReady} ${base?"new ":""}contact${nReady===1?"":"s"} ready for export.</b> `+
       `<span class="sub">${nCheck?`${nCheck} still need${nCheck===1?"s":""} review.`:"Everything has been reviewed."}${added&&added!==n?` ${added} new from the last run.`:""}${base&&nEx?` ${nEx} were already on your list.`:""}</span>`;
@@ -900,20 +1016,23 @@ function render(){
   } else sc.hidden=true;
   // merging
   $("mergeState").hidden=!base;
-  if(base) $("mergeState").innerHTML=`Selected: <b>${esc(base.name)}</b> · ${base.rows.length} existing contacts`+(isExample?"":` · <b>${contacts.filter(c=>!c.exists).length}</b> new, ${nEx} already there`);
+  if(base) $("mergeState").innerHTML=`Selected: <b>${esc(base.name)}</b> · ${base.rows.length} existing contacts`+(n?` · <b>${n-nEx-nPoss}</b> new, <b>${nEx}</b> already there, <b>${nPoss}</b> possible duplicate${nPoss===1?"":"s"}`:"");
   $("baseBtnText").textContent=base?"Choose another list":"Choose Excel list";
   $("baseRemove").hidden=!base;
   if(typeof renderNav==="function") renderNav(nCheck);
   if(typeof renderHead==="function") renderHead();
   const list=tab==="check"?contacts.filter(needsCheck):contacts;
   $("tbody").innerHTML=list.length?list.map(rowHtml).join(""):
-    `<tr class="emptyrow"><td colspan="7">${n?"Everything has been reviewed. You can export to Excel.":"No contacts yet. Add a document above."}</td></tr>`;
+    `<tr class="emptyrow"><td colspan="8">${n?"Everything has been reviewed. You can export to Excel.":"No contacts yet. Add a document above."}</td></tr>`;
   if(openId!=null) renderPanel();
 }
 
 /* ---------- side panel ---------- */
 const panelList=()=>tab==="check"?contacts.filter(needsCheck):contacts;
-function focusField(k){ const f=(k&&$("pf-"+k))||$("p-body").querySelector(".has-warn input")||$("p-body").querySelector("input"); if(f){ f.focus(); if(k) f.select(); } }
+function focusField(k){
+  if(!k){ const cmp=$("p-body").querySelector(".compare .btn.primary"); if(cmp){ $("p-body").scrollTop=0; cmp.focus({preventScroll:true}); return; } }
+  const f=(k&&$("pf-"+k))||$("p-body").querySelector(".has-warn input")||$("p-body").querySelector("input"); if(f){ f.focus(); if(k) f.select(); }
+}
 function openPanel(id,field){
   openId=id; $("panel").hidden=false; $("scrim").hidden=false; render();
   setTimeout(()=>focusField(field),0);
@@ -921,6 +1040,33 @@ function openPanel(id,field){
 function closePanel(){ const id=openId; openId=null; $("panel").hidden=true; $("scrim").hidden=true; render();
   const tr=document.querySelector(`tr[data-id="${id}"]`); if(tr) tr.focus(); }
 function nextCheck(fromId){ const i=contacts.findIndex(x=>x.id===fromId); return contacts.slice(i+1).find(needsCheck)||contacts.find(x=>needsCheck(x)&&x.id!==fromId); }
+function compareHtml(c,o,label,title,btns){
+  const F=[["naam","Name"],["bedrijf","Company"],["functie","Job title"],["email","Email"],["telefoon","Phone"],["plaats","City"]];
+  const rows=F.map(([k,l])=>{
+    const a=k==="plaats"?splitAddr(c.adres).plaats:(c[k]||""), b=k==="plaats"?(o.plaats!==undefined?o.plaats:splitAddr(o.adres||"").plaats):(o[k]||"");
+    if(!a&&!b) return "";
+    const diff=a&&b&&normName(a)!==normName(b);
+    return `<tr><th>${l}</th><td class="${diff?"diff":""}">${a?esc(a):"—"}</td><td class="${diff?"diff":""}">${b?esc(b):"—"}</td></tr>`;
+  }).join("");
+  return `<div class="compare"><div class="ct">${WARN_SM}<span>${esc(title)}</span></div><table><thead><tr><th></th><th>This contact</th><th>${label}</th></tr></thead><tbody>${rows}</tbody></table><div class="cbtns">${btns}</div></div>`;
+}
+function nextAfter(c){
+  if(contacts.includes(c)&&needsCheck(c)){ render(); return; }
+  const nx=nextCheck(c.id); if(nx) openPanel(nx.id); else { closePanel(); toast("Everything reviewed. You can export now.",false); }
+}
+function resolveDup(c,action){
+  const di=c.issues.find(i=>i.kind==="dup"), o=di&&contacts.find(x=>x.id===di.other); if(!o) return;
+  reviewed++;
+  if(action==="keep"){ (c.keepWith=c.keepWith||[]).push(personKey(o)); (o.keepWith=o.keepWith||[]).push(personKey(c)); }
+  else if(action==="merge"){
+    if(o.email&&(!validEmail(c.email)||nameEmailMismatch(c))) c.email=o.email;
+    KEYS.forEach(k=>{ if(!c[k]&&o[k]) c[k]=o[k]; });
+    c.bron.push(...o.bron); c.keepWith=[...new Set([...(c.keepWith||[]),...(o.keepWith||[])])];
+    contacts.splice(contacts.indexOf(o),1); dupes++;
+  }
+  else if(action==="del"){ const i=contacts.indexOf(c); lastDeleted={c,i}; contacts.splice(i,1); toast(`${c.naam||c.bedrijf||"Contact"} deleted`,true); }
+  validateAll(); afterChange(); nextAfter(c);
+}
 function renderPanel(){
   const c=contacts.find(x=>x.id===openId); if(!c){ openId=null; $("panel").hidden=true; $("scrim").hidden=true; return; }
   const list=panelList(), idx=list.findIndex(x=>x.id===c.id);
@@ -932,10 +1078,15 @@ function renderPanel(){
   const msg=m=>`<div class="msg">${WARN_SM}<span>${esc(m)}</span></div>`;
   let h="";
   if(needsCheck(c)){
-    h+=`<div class="issues">`+c.issues.map(i=>`<div class="it">${WARN_SM}<span>${esc(i.m)}</span>${i.f?`<button class="fixlink go" data-focus="${i.f}">Fix</button>`:""}</div>`).join("")+`</div>`;
+    const plain=c.issues.filter(i=>i.kind!=="dup"&&i.kind!=="basedup");
+    if(plain.length) h+=`<div class="issues">`+plain.map(i=>`<div class="it">${WARN_SM}<span>${esc(i.m)}${i.sug?`<br><span class="sugline">Suggestion: <b>${esc(i.sug)}</b></span>`:""}</span>${i.sug?`<button class="fixlink go" data-sug="${i.f}">Use suggestion</button>`:i.f?`<button class="fixlink go" data-focus="${i.f}">Fix</button>`:""}</div>`).join("")+`</div>`;
+    const di=c.issues.find(i=>i.kind==="dup"), bi=c.issues.find(i=>i.kind==="basedup");
+    const od=di&&contacts.find(x=>x.id===di.other);
+    if(od) h+=compareHtml(c,od,"Other contact",di.m,`<button class="btn small" data-dup="keep">Keep both</button><button class="btn small" data-dup="del">Delete this one</button><button class="btn small primary" data-dup="merge">Merge into one</button>`);
+    if(bi&&c.baseMatch) h+=compareHtml(c,c.baseMatch,"In your Excel",bi.m,`<button class="btn small" data-base="skip">Skip, already there</button><button class="btn small primary" data-base="add">Add as new contact</button>`);
   } else h+=`<div class="p-summary">${label}</div>`;
-  FIELDS.forEach(([k,l])=>{ const w=byF[k];
-    h+=`<div class="fld${w?" has-warn":""}"><label for="pf-${k}">${l}</label><input id="pf-${k}" data-k="${k}" value="${esc(c[k])}" spellcheck="false" autocomplete="off">${w?w.map(msg).join(""):""}</div>`; });
+  FIELDS.forEach(([k,l])=>{ const w=byF[k], sg=(c.issues.find(i=>i.f===k&&i.sug)||{}).sug;
+    h+=`<div class="fld${w?" has-warn":""}"><label for="pf-${k}">${l}</label><input id="pf-${k}" data-k="${k}" value="${esc(c[k])}" spellcheck="false" autocomplete="off">${w?w.map(msg).join(""):""}${sg?`<div class="sugbox"><span>Suggestion: <b>${esc(sg)}</b></span><button class="btn small" data-sug="${k}">Use suggestion</button></div>`:""}</div>`; });
   if(c.repeat>1) h+=`<div class="p-note">This person appears ${c.repeat}× in the source with different details. Each row stays separate in the export.</div>`;
   h+=`<div class="p-src"><h3>Found in</h3>${c.bron.map(b=>`<div class="snip"><span>${esc(b.file)}</span>${esc(b.snippet||"No excerpt")}</div>`).join("")}</div>`;
   $("p-body").innerHTML=h;
@@ -966,7 +1117,14 @@ $("p-foot").addEventListener("click",e=>{
   toast(`${c.naam||c.bedrijf||"Contact"} deleted`,true);
   if(nx&&tab==="check") openPanel(nx.id); else closePanel();
 });
-$("p-body").addEventListener("click",e=>{ const b=e.target.closest("[data-focus]"); if(b) focusField(b.dataset.focus); });
+$("p-body").addEventListener("click",e=>{
+  const c=contacts.find(x=>x.id===openId); if(!c) return;
+  const sg=e.target.closest("[data-sug]");
+  if(sg){ const k=sg.dataset.sug, it=c.issues.find(i=>i.f===k&&i.sug); if(it){ c[k]=it.sug; c.conflicts=c.conflicts.filter(x=>x.f!==k); if(k!=="bedrijf") normalize(c); if(c.conf==="laag") c.conf="middel"; validateAll(); afterChange(); render(); setTimeout(()=>focusField(k),0); } return; }
+  const d=e.target.closest("[data-dup]"); if(d){ resolveDup(c,d.dataset.dup); return; }
+  const bb=e.target.closest("[data-base]"); if(bb){ c.baseDecision=bb.dataset.base; reviewed++; validateAll(); afterChange(); nextAfter(c); return; }
+  const b=e.target.closest("[data-focus]"); if(b) focusField(b.dataset.focus);
+});
 $("p-close").addEventListener("click",closePanel);
 
 /* ---------- my lists (saved per user) ---------- */
@@ -990,6 +1148,7 @@ function defaultName(file){
   const d=new Date(); return "List "+d.toLocaleDateString("en-GB",{day:"numeric",month:"short"})+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
 }
 function afterChange(file){
+  exportResult=null;
   if(isExample||!db) return;
   if(!currentList){
     if(!contacts.length) return;
@@ -1005,6 +1164,8 @@ function packRow(c){
   const o={}; KEYS.forEach(k=>{ if(c[k]) o[k]=c[k]; });
   if(c.conf==="laag"){ o.conf="laag"; o.tw=c.twijfel; }
   if(c.status==="approved") o.ok=1;
+  if(c.keepWith&&c.keepWith.length) o.kw=c.keepWith;
+  if(c.baseDecision) o.bd=c.baseDecision;
   o.b=c.bron.slice(0,4).map(b=>[String(b.file).slice(0,120),String(b.snippet||"").slice(0,100)]);
   return o;
 }
@@ -1034,8 +1195,8 @@ async function openList(id){
   try{ for(let i=0;i<(meta.parts||1);i++){ const sn=await listsCol().doc(id+"_p"+i).get(); if(sn.exists) rows.push(...((sn.data()||{}).rows||[])); } }
   catch(e){ notice("This list could not be opened. Please try again later."); setSave(""); return; }
   if(openId!=null) closePanel();
-  contacts=rows.map(r=>{ const c={id:++seq,conf:r.conf||"hoog",twijfel:r.tw||"",bron:(r.b||[]).map(x=>({file:x[0],snippet:x[1]})),conflicts:[],status:r.ok?"approved":null}; KEYS.forEach(k=>c[k]=r[k]||""); return c; });
-  dupes=meta.dupes||0; isExample=false; confirmDel=false;
+  contacts=rows.map(r=>{ const c={id:++seq,conf:r.conf||"hoog",twijfel:r.tw||"",bron:(r.b||[]).map(x=>({file:x[0],snippet:x[1]})),conflicts:[],status:r.ok?"approved":null,keepWith:r.kw||[],baseDecision:r.bd||null}; KEYS.forEach(k=>c[k]=r[k]||""); return c; });
+  dupes=meta.dupes||0; isExample=false; confirmDel=false; reviewed=0; exportResult=null;
   currentList={id,name:meta.name||"",createdAt:meta.createdAt,parts:meta.parts||1,files:(meta.files||[]).slice()};
   validateAll(); if(base) markExisting();
   lastRun=meta.updatedAt?new Date(meta.updatedAt):null; successOn=false; tab="all";
@@ -1046,7 +1207,7 @@ async function newList(){
   if(running){ notice("Wait until processing has finished."); return; }
   await flushSave();
   if(openId!=null) closePanel();
-  contacts=[]; dupes=0; isExample=false; currentList=null; lastRun=null; successOn=false; tab="all"; confirmDel=false; saveState="";
+  contacts=[]; dupes=0; isExample=false; currentList=null; lastRun=null; successOn=false; tab="all"; confirmDel=false; saveState=""; reviewed=0; exportResult=null;
   clearQueue(); notice(""); go("verwerken");
 }
 async function deleteList(){
@@ -1135,9 +1296,9 @@ document.addEventListener("paste",e=>{
   const t=cd.getData("text/plain")||(cd.getData("text/html")?htmlToText(cd.getData("text/html")):"");
   if(t.trim()){ e.preventDefault(); openPaste(t); }
 });
-$("successClose").addEventListener("click",()=>{ successOn=false; render(); });
-$("successAct").addEventListener("click",()=>{ if(contacts.some(needsCheck)) $("reviewBtn").click(); else exportXlsx(); });
-$("baseRemove").addEventListener("click",()=>{ base=null; contacts.forEach(c=>c.exists=false); render(); });
+$("successClose").addEventListener("click",()=>{ successOn=false; exportResult=null; render(); });
+$("successAct").addEventListener("click",()=>{ if(exportResult) return exportXlsx(); if(contacts.some(needsCheck)) $("reviewBtn").click(); else exportXlsx(); });
+$("baseRemove").addEventListener("click",()=>{ base=null; validateAll(); afterChange(); render(); });
 $("scrim").addEventListener("click",closePanel);
 $("p-prev").addEventListener("click",()=>{ const l=panelList(), i=l.findIndex(x=>x.id===openId); if(i>0) openPanel(l[i-1].id); });
 $("p-next").addEventListener("click",()=>{ const l=panelList(), i=l.findIndex(x=>x.id===openId); if(i>=0&&i<l.length-1) openPanel(l[i+1].id); });

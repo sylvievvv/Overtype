@@ -2,9 +2,32 @@
   "description": "Ground truth for sample-contacts.pdf: 52 contact rows with four deliberate inconsistencies. Every other row is correct; some people appear 2-3 times with a different phone number and city, which is not an error.",
   "rows": 52,
   "flagged": {
-    "1008": ["Email address incomplete or invalid", "Email address doesn't match the name"],
-    "1020": ["Email address missing"],
-    "1032": ["Email address doesn't match the name", "Same email address as Lotte van Dijk"],
-    "1044": ["Company doesn't match the email domain"]
+    "1008": [
+      "Email address incomplete or invalid",
+      "Email address doesn't match the name",
+      "Possible duplicate of Eva de Vries"
+    ],
+    "1020": [
+      "Email address missing",
+      "Possible duplicate of Fleur Blom"
+    ],
+    "1032": [
+      "Email address doesn't match the name",
+      "Same email address as Lotte van Dijk"
+    ],
+    "1044": [
+      "Company doesn't match the email domain"
+    ]
+  },
+  "suggestions": {
+    "1008": {
+      "email": "eva.devries@oranjeadviesgroep.nl"
+    },
+    "1020": {
+      "email": "fleur.blom@brightconsulting.nl"
+    },
+    "1044": {
+      "bedrijf": "Westpoort Installaties"
+    }
   }
 }

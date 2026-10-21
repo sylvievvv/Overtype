@@ -2,7 +2,7 @@
 
 How Overtyp was tested, what went wrong along the way, and what still has to be measured.
 
-## Test file
+## Test file 1: clean relation file
 
 [`tests/fixtures/sample-contacts.pdf`](../tests/fixtures/sample-contacts.pdf): a two-page relation file with 52 contact rows (ID, name, company, job title, email, phone, city). The data is fictional. It contains four deliberate inconsistencies:
 
@@ -17,15 +17,34 @@ The file also contains something that is **not** an error: 20 of the 21 names ap
 
 Ground truth: [`tests/fixtures/sample-contacts.expected.json`](../tests/fixtures/sample-contacts.expected.json).
 
+## Test file 2: messy file + existing customer list
+
+[`tests/fixtures/messy-contacts.pdf`](../tests/fixtures/messy-contacts.pdf) (20 rows) and [`tests/fixtures/existing-list.xlsx`](../tests/fixtures/existing-list.xlsx) (8 existing customers, Dutch column names). Ground truth: [`messy-contacts.expected.json`](../tests/fixtures/messy-contacts.expected.json).
+
+| Row | What's in it | Expected |
+| --- | --- | --- |
+| 2001 / 2002 | *Jan Jansen* and *Jan Janssen*, same company and phone | possible duplicate, both shown side by side |
+| 2003 | `…@noordlandservices.con` | flagged, suggestion `…@noordlandservices.nl` (domain known from other rows) |
+| 2004 | `…@gmial.com` | flagged, suggestion `…@gmail.com` |
+| 2005 | no phone, but an email | **not** flagged |
+| 2006 | no email and no phone | flagged |
+| 2007 | company written *A.B.C. Solutions*, email `@abcsolutions.nl` | **not** flagged |
+| 2008 / 2009 | same person, *Noordland Services* vs *Noordland Services B.V.* | merged automatically |
+| 2010 | phone `0612345` | flagged |
+| 2016 | `…@brightconsulting,nl` | flagged, suggestion with a dot |
+| 2011, 2012, 2015 | also in the existing list with the same email | already in your Excel, not exported again |
+| 2013 | in the existing list with an old email address | possible duplicate: add or skip |
+| 2018 | *Ruben Bos*, existing list has *Ruben Bosch* with the same email | possible duplicate: add or skip |
+
 ## What is tested
 
 The pipeline has an AI step (extraction) and a deterministic part (everything after it). The automated tests cover the deterministic part with the real app code:
 
-1. The PDF is read with the same pdf.js version the app uses. All 52 rows come out.
-2. The rows are fed in as the model is instructed to return them: one object per row, copied verbatim. For a clean table like this one, that is the expected model output.
-3. Validation and duplicate handling run, and the result is compared with the ground truth.
+1. The PDFs are read with the same pdf.js version the app uses. All rows come out.
+2. The rows are fed in as the model is instructed to return them: one object per row, copied verbatim. For tables like these, that is the expected model output.
+3. Validation, suggestions, duplicate handling, the comparison with the existing list and the Excel export run, and the results are compared with the ground truth. Decisions (keep both, merge, skip, use suggestion) are tested too.
 
-## Results
+## Results: clean file
 
 | Measure | Result |
 | --- | --- |
@@ -35,6 +54,18 @@ The pipeline has an AI step (extraction) and a deterministic part (everything af
 | Correct rows wrongly flagged | 0 |
 | Rows wrongly merged | 0 |
 | Repeated people marked with a note ("appears 3× with different details") | 48 rows, none flagged as an error |
+| Suggestions | 1008 → the address Eva uses in her other rows · 1020 → Fleur's address from her other row · 1044 → the company that matches the email domain |
+
+## Results: messy file
+
+| Measure | Result |
+| --- | --- |
+| Rows read | 20 / 20 |
+| Exact duplicates merged | 1 / 1 (2008 + 2009) |
+| Rows flagged | 7 / 7, no others |
+| Typo suggestions correct | 3 / 3 |
+| With the existing list | 3 already there, 2 possible duplicates, 14 new: exactly as expected |
+| Export | existing 8 rows kept, only new contacts appended, in the list's own columns |
 
 ## Iterations: what didn't work at first
 
@@ -49,6 +80,12 @@ The pipeline has an AI step (extraction) and a deterministic part (everything af
 
 **4. A false extra reason.** For row 1008 the app also claimed "company doesn't match the email domain", only because the domain had no TLD to compare against.
 *Fix:* the domain check is skipped when the domain is incomplete; the "invalid email" reason already covers it.
+
+**5. A possible duplicate would have flagged correct rows.** When "same name, different email" became a duplicate check, Eva de Vries' two correct rows would also have been flagged because row 1008 has the wrong address.
+*Fix:* if only one of the two emails matches the person's name, only that one is flagged.
+
+**6. The comparison was hidden.** In the first version of the duplicate panel, the side-by-side comparison collapsed to a thin line, and the panel scrolled straight to the first input. Found while checking screenshots.
+*Fix:* the panel opens at the top when there is a comparison, and suggestions are also shown directly under the field.
 
 ## Not measured yet
 
